@@ -1,0 +1,6 @@
+RawData/
+data_processed/
+outputs/
+
+# Large CSVs
+*.csv
