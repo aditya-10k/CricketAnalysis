@@ -1,0 +1,5 @@
+#Backend Requirements
+fastapi
+uvicorn
+pandas
+numpy
