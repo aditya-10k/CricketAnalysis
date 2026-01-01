@@ -1,6 +1,7 @@
 # end_applications/player_replacement.py
 
 import numpy as np
+from end_applications.analytics_adjustment.confidence import exposure_confidence
 
 VECTOR_COLS = [
     "career_bat_rpa_z",
@@ -81,7 +82,7 @@ def get_player_replacements(
     exclude_retired: bool = True,
     max_days_since_last_match: int = 365,
     form_cap: float = 0.3,
-    exposure_cap: int = 3000,   # 🔥 NEW (soft cap)
+    exposure_cap: int = 3000,
 ) -> list[dict]:
 
     vectors = load_player_vectors(conn)
@@ -122,9 +123,12 @@ def get_player_replacements(
         raw_form = form["form_z"] * form["confidence"]
         form_adj = 1 + max(-form_cap, min(form_cap, raw_form))
 
-        # ---- Exposure-based confidence (KEY FIX)
-        exposure = info["balls_faced"] + info["balls_bowled"]
-        confidence = np.sqrt(min(exposure, exposure_cap) / exposure_cap)
+        # ---- Exposure-based confidence (CENTRALIZED)
+        confidence = exposure_confidence(
+            info["balls_faced"],
+            info["balls_bowled"],
+            cap=exposure_cap
+        )
 
         final_score = sim * form_adj * confidence
         delta = info["total_value_z"] - target_value
@@ -134,7 +138,7 @@ def get_player_replacements(
             "role": info["role"],
             "nationality": info["nationality"],
             "days_since_last_match": info["days_since_last_match"],
-            "exposure": exposure,
+            "exposure": info["balls_faced"] + info["balls_bowled"],
             "similarity": round(sim, 4),
             "form_adjustment": round(form_adj, 4),
             "confidence": round(confidence, 4),
