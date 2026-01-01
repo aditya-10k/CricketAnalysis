@@ -1,7 +1,15 @@
 from fastapi import FastAPI
+from backend.api.player_replacement import router as player_replacement_router
 
-app = FastAPI(title="Cricket Analysis API")
+app = FastAPI(
+    title="Cricket Analysis API",
+    version="1.0.0"
+)
+
+# Register API routes
+app.include_router(player_replacement_router, prefix="/api")
+
 
 @app.get("/")
-def health():
-    return {"status": "FastAPI backend is running"}
+def health_check():
+    return {"status": "API is running"}

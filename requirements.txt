@@ -1,4 +1,5 @@
 #Backend Requirements
+python=3.11.9
 fastapi
 uvicorn
 pandas

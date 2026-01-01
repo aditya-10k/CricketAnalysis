@@ -2,6 +2,7 @@
 
 import numpy as np
 from end_applications.analytics_adjustment.confidence import exposure_confidence
+# from db.player_replacement_queries import get_candidate_players, get_target_player_role
 
 VECTOR_COLS = [
     "career_bat_rpa_z",
