@@ -1,43 +1,48 @@
-# this is solely for testing the function
-from end_applications.player_replacement import get_player_replacements
+# test/player_replacement_test.py
+"""COMPREHENSIVE PLAYER REPLACEMENT TEST - PRODUCTION VERSION"""
 
-if __name__ == "__main__":
-    import sqlite3
+import sys
+import os
 
-    # Connect to analytics DB
+parent_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, parent_dir)
+
+from end_applications.player_replacement_util import (
+    get_player_replacements, 
+    get_player_info,
+    get_player_replacements_smart  # Smart version with adaptive filters
+)
+import sqlite3
+
+
+# your_app.py (YOUR PRODUCTION CODE)
+
+import sqlite3
+from end_applications.player_replacement_util import get_player_replacements_smart
+
+def find_ipl_replacement(injured_player, team_nationality_slot):
+    """Example: IPL team needs replacement"""
+    
     conn = sqlite3.connect("analytics.db")
-
-    # Target player
-    target = "V Kohli"
-
-    # ---- Scenario 1: Global replacement (no nationality restriction)
-    print("\n=== Global replacements (any nationality, active only) ===\n")
-
-    res_global = get_player_replacements(
+    
+    replacements = get_player_replacements_smart(
         conn=conn,
-        target_player=target,
+        target_player=injured_player,
         top_k=5,
-        allowed_nationalities=None,     # allow all
-        exclude_retired=True,            # enforce 12-month rule
-        max_days_since_last_match=365
+        allowed_nationalities=[team_nationality_slot],
+        match_batting_style=True  # Keep similar style
     )
-
-    for r in res_global:
-        print(r)
-
-    # ---- Scenario 2: Same-nationality replacement (e.g. IPL Indian slot)
-    print("\n=== Same-nationality replacements (India only) ===\n")
-
-    res_india = get_player_replacements(
-        conn=conn,
-        target_player=target,
-        top_k=5,
-        allowed_nationalities=["India" , "West Indies" , "Australia"],
-        exclude_retired=True,
-        max_days_since_last_match=365
-    )
-
-    for r in res_india:
-        print(r)
-
+    
     conn.close()
+    
+    return replacements
+
+
+# Usage:
+if __name__ == "__main__":
+    # Example: RCB needs to replace injured Kohli with Indian player
+    options = find_ipl_replacement("HH Pandya", "India")
+    
+    for i, player in enumerate(options, 1):
+        print(f"{i}. {player['player']} - Score: {player['final_score']}")
+
