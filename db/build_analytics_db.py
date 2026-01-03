@@ -7,8 +7,12 @@ Run once after analytics pipeline completes.
 
 import sqlite3
 import pandas as pd
+from pathlib import Path
 
-DB_PATH = "analytics.db"
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+
+OUTPUTS_DIR = PROJECT_ROOT / "outputs"
+DB_PATH = PROJECT_ROOT / "analytics.db"
 
 # =====================================================
 # PLAYER-LEVEL TABLES
@@ -19,7 +23,7 @@ def load_player_batting_positions(conn):
     print("  → Loading player batting positions...")
     
     try:
-        df = pd.read_csv("C:/Desktop/crickanal/outputs/player_batting_positions.csv")
+        df = pd.read_csv(OUTPUTS_DIR / "player_batting_positions.csv")
         
         required_cols = {"player", "avg_position", "median_position", "innings_count"}
         missing = required_cols - set(df.columns)
@@ -44,7 +48,7 @@ def load_player_vectors(conn):
     """Load 4D vectors + metadata for similarity matching"""
     print("  → Loading player vectors...")
 
-    vectors_df = pd.read_csv("C:/Desktop/crickanal/outputs/player_vectors_base.csv")
+    vectors_df = pd.read_csv(OUTPUTS_DIR / "player_vectors_base.csv")
 
     # Check if metadata columns already exist
     metadata_cols = {"inferred_nationality", "batting_style", "bowling_style"}
@@ -55,7 +59,7 @@ def load_player_vectors(conn):
         print(f"    ⚠ Metadata columns missing: {missing_metadata}")
         print("    → Merging from player_final_values.csv...")
 
-        final_values_df = pd.read_csv("C:/Desktop/crickanal/outputs/player_final_values.csv")
+        final_values_df = pd.read_csv(OUTPUTS_DIR / "player_final_values.csv")
 
         # Check what metadata columns are available
         available_metadata = metadata_cols & set(final_values_df.columns)
@@ -106,7 +110,7 @@ def load_player_final_values(conn):
     """Load final rankings with confidence scores"""
     print("  → Loading player final values...")
 
-    df = pd.read_csv("C:/Desktop/crickanal/outputs/player_final_values.csv")
+    df = pd.read_csv(OUTPUTS_DIR / "player_final_values.csv")
 
     required_cols = {
         "player", "role", "total_value_z", "confidence",
@@ -136,7 +140,7 @@ def load_player_form(conn):
     """Load rolling 10-inning form overlay"""
     print("  → Loading player form...")
 
-    df = pd.read_csv("C:/Desktop/crickanal/outputs/player_form_overlay.csv")
+    df = pd.read_csv(OUTPUTS_DIR / "player_form_overlay.csv")
 
     required_cols = {"player", "form_total_z", "form_confidence"}
     missing = required_cols - set(df.columns)
@@ -154,7 +158,7 @@ def load_player_daily_innings(conn):
     """Load player-innings aggregation for PVP/PVT modules"""
     print("  → Loading player daily innings...")
 
-    df = pd.read_csv("C:/Desktop/crickanal/outputs/player_daily_innings_impact.csv")
+    df = pd.read_csv(OUTPUTS_DIR / "player_daily_innings_impact.csv")
 
     df.to_sql("player_daily_innings", conn, if_exists="replace", index=False)
 
@@ -172,7 +176,7 @@ def load_team_elo(conn):
     print("  → Loading team ELO history...")
 
     try:
-        df = pd.read_csv("C:/Desktop/crickanal/outputs/team_elo_history.csv")
+        df = pd.read_csv(OUTPUTS_DIR / "team_elo_history.csv")
         df.to_sql("team_elo", conn, if_exists="replace", index=False)
         conn.execute("CREATE INDEX IF NOT EXISTS idx_te_team_date ON team_elo(team, date)")
         print(f"    ✓ Loaded {len(df)} ELO records")
@@ -187,7 +191,7 @@ def load_ball_by_ball_combined(conn):
     """Load full ball-by-ball data with RPA+WPA"""
     print("  → Loading ball-by-ball combined data...")
 
-    df = pd.read_csv("C:/Desktop/crickanal/outputs/ball_by_ball_rpa_wpa_combined.csv")
+    df = pd.read_csv(OUTPUTS_DIR / "ball_by_ball_rpa_wpa_combined.csv")
 
     # ✅ FIX 1: Rename 'batter' to 'striker' for consistency
     if 'batter' in df.columns:
