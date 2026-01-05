@@ -1,4 +1,4 @@
-# test/check_ball_columns.py
+'''# test/check_ball_columns.py
 """Check what columns exist in ball_by_ball CSV"""
 
 import pandas as pd
@@ -81,3 +81,32 @@ except FileNotFoundError:
     print(f"❌ File not found: {csv_path}\n")
 except Exception as e:
     print(f"❌ Error reading file: {e}\n")
+'''
+
+import sqlite3
+
+db_path = "analytics.db"   # adjust path if needed
+
+conn = sqlite3.connect(db_path)
+cursor = conn.cursor()
+
+# Get all tables
+cursor.execute("""
+    SELECT name 
+    FROM sqlite_master 
+    WHERE type='table'
+""")
+
+tables = cursor.fetchall()
+
+for (table_name,) in tables:
+    print(f"\n📦 Table: {table_name}")
+    
+    cursor.execute(f"PRAGMA table_info({table_name})")
+    columns = cursor.fetchall()
+    
+    for col in columns:
+        cid, name, dtype, notnull, default, pk = col
+        print(f"  - {name} ({dtype})")
+
+conn.close()
