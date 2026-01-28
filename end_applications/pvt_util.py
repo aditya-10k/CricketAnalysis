@@ -12,7 +12,7 @@ FIXES APPLIED:
 6. pvt_adjustment scalar for downstream use
 """
 
-import sqlite3
+import db.session as db
 import numpy as np
 from typing import Optional, Dict, List
 
@@ -36,7 +36,7 @@ TEAM_STRENGTH_TIERS = {
 
 
 def get_player_vs_team_batting(
-    conn: sqlite3.Connection,
+    conn: db.Connection,
     player: str,
     opponent_team: str,
     venue: Optional[str] = None
@@ -190,7 +190,7 @@ def get_player_vs_team_batting(
 
 
 def get_player_vs_team_bowling(
-    conn: sqlite3.Connection,
+    conn: db.Connection,
     player: str,
     opponent_team: str,
     venue: Optional[str] = None
@@ -329,7 +329,7 @@ def get_player_vs_team_bowling(
 
 
 def get_player_vs_all_teams(
-    conn: sqlite3.Connection,
+    conn: db.Connection,
     player: str,
     role: str,
     min_balls: int = 30
@@ -383,7 +383,7 @@ def get_player_vs_all_teams(
 
 
 def get_player_vs_strength_tiers(
-    conn: sqlite3.Connection,
+    conn: db.Connection,
     player: str,
     role: str
 ) -> Dict:
@@ -513,7 +513,7 @@ def get_player_vs_strength_tiers(
     }
 
 
-def _get_batting_baseline(conn: sqlite3.Connection, player: str) -> Optional[Dict]:
+def _get_batting_baseline(conn: db.Connection, player: str) -> Optional[Dict]:
     """Get player's career batting baseline"""
     
     row = conn.execute("""
@@ -542,7 +542,7 @@ def _get_batting_baseline(conn: sqlite3.Connection, player: str) -> Optional[Dic
     }
 
 
-def _get_bowling_baseline(conn: sqlite3.Connection, player: str) -> Optional[Dict]:
+def _get_bowling_baseline(conn: db.Connection, player: str) -> Optional[Dict]:
     """Get player's career bowling baseline"""
     
     row = conn.execute("""

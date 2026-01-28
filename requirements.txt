@@ -4,3 +4,7 @@ fastapi
 uvicorn
 pandas
 numpy
+psycopg2-binary
+sqlalchemy
+requests
+python-multipart

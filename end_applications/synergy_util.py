@@ -10,7 +10,7 @@ FIXES APPLIED:
 - Complete bowling combination logic
 """
 
-import sqlite3
+import db.session as db
 import numpy as np
 from typing import Optional, Dict, List, Tuple
 from collections import defaultdict
@@ -31,7 +31,7 @@ BOWLING_COMBO_WEAK = 12
 # =====================================================
 
 def get_batting_partnership(
-    conn: sqlite3.Connection,
+    conn: db.Connection,
     player_a: str,
     player_b: str,
     venue: Optional[str] = None
@@ -200,7 +200,7 @@ def get_batting_partnership(
 
 
 def get_best_batting_partners(
-    conn: sqlite3.Connection,
+    conn: db.Connection,
     player: str,
     min_balls: int = 25,
     top_k: int = 10
@@ -278,7 +278,7 @@ def get_best_batting_partners(
 
 
 def predict_batting_synergy(
-    conn: sqlite3.Connection,
+    conn: db.Connection,
     player_a: str,
     player_b: str
 ) -> Dict:
@@ -400,7 +400,7 @@ def predict_batting_synergy(
 # =====================================================
 
 def get_bowling_combination(
-    conn: sqlite3.Connection,
+    conn: db.Connection,
     bowler_a: str,
     bowler_b: str,
     phase: Optional[str] = None,
@@ -595,7 +595,7 @@ def get_bowling_combination(
 
 
 def get_best_bowling_partners(
-    conn: sqlite3.Connection,
+    conn: db.Connection,
     bowler: str,
     phase: Optional[str] = None,
     min_balls: int = 30,
@@ -673,7 +673,7 @@ def get_best_bowling_partners(
 # HELPER FUNCTIONS
 # =====================================================
 
-def _get_solo_batting_stats(conn: sqlite3.Connection, player: str, venue: Optional[str]) -> Optional[Dict]:
+def _get_solo_batting_stats(conn: db.Connection, player: str, venue: Optional[str]) -> Optional[Dict]:
     """Get player's solo batting stats"""
     
     venue_filter = "AND venue = ?" if venue else ""
@@ -707,7 +707,7 @@ def _get_solo_batting_stats(conn: sqlite3.Connection, player: str, venue: Option
     }
 
 
-def _get_solo_bowling_stats(conn: sqlite3.Connection, bowler: str, phase: Optional[str], venue: Optional[str]) -> Optional[Dict]:
+def _get_solo_bowling_stats(conn: db.Connection, bowler: str, phase: Optional[str], venue: Optional[str]) -> Optional[Dict]:
     """Get bowler's solo stats"""
     
     # ✅ FIXED: Add table alias
@@ -751,7 +751,7 @@ def _get_solo_bowling_stats(conn: sqlite3.Connection, bowler: str, phase: Option
     }
 
 
-def _get_hand_combination(conn: sqlite3.Connection, player_a: str, player_b: str) -> str:
+def _get_hand_combination(conn: db.Connection, player_a: str, player_b: str) -> str:
     """Get batting hand combination (RHB-LHB, RHB-RHB, etc.)"""
     
     try:
@@ -776,7 +776,7 @@ def _get_hand_combination(conn: sqlite3.Connection, player_a: str, player_b: str
         return "UNKNOWN"
 
 
-def _get_batting_profile(conn: sqlite3.Connection, player: str) -> Optional[Dict]:
+def _get_batting_profile(conn: db.Connection, player: str) -> Optional[Dict]:
     """Get player batting profile for similarity matching"""
     
     try:
@@ -816,7 +816,7 @@ def _get_batting_profile(conn: sqlite3.Connection, player: str) -> Optional[Dict
         return None
 
 
-def _find_similar_partnerships(conn: sqlite3.Connection, profile_a: Dict, profile_b: Dict, limit: int = 30) -> List[Dict]:
+def _find_similar_partnerships(conn: db.Connection, profile_a: Dict, profile_b: Dict, limit: int = 30) -> List[Dict]:
     """Find similar partnerships for prediction"""
     
     # Simplified: find any strong partnerships as proxies
@@ -872,7 +872,7 @@ def _are_complementary_roles(profile_a: Dict, profile_b: Dict) -> bool:
     return sr_diff > 20
 
 
-def _calculate_wicket_clustering(conn: sqlite3.Connection, bowler_a: str, bowler_b: str, phase: Optional[str]) -> float:
+def _calculate_wicket_clustering(conn: db.Connection, bowler_a: str, bowler_b: str, phase: Optional[str]) -> float:
     """Calculate wicket clustering coefficient"""
     
     # ✅ FIXED: Add table alias
@@ -922,7 +922,7 @@ def _calculate_wicket_clustering(conn: sqlite3.Connection, bowler_a: str, bowler
     
     return (wickets_paired / total_wickets) if total_wickets > 0 else 0.0
 
-def _get_bowling_styles(conn: sqlite3.Connection, bowler_a: str, bowler_b: str) -> str:
+def _get_bowling_styles(conn: db.Connection, bowler_a: str, bowler_b: str) -> str:
     """Get bowling style combination"""
     
     try:

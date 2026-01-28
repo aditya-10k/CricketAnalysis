@@ -4,7 +4,7 @@ PLAYER REPLACEMENT ENGINE - Production API Functions
 Uses Euclidean distance in 4D z-score space with constraint matching.
 """
 
-import sqlite3
+import db.session as db
 import numpy as np
 from typing import Optional
 
@@ -23,7 +23,7 @@ VECTOR_COLS = [
 
 
 def get_player_replacements(
-    conn: sqlite3.Connection,
+    conn: db.Connection,
     target_player: str,
     top_k: int = 10,
     allowed_nationalities: Optional[list[str]] = None,
@@ -94,7 +94,7 @@ def get_player_replacements(
     return results[:top_k]
 
 
-def _load_target_player(conn: sqlite3.Connection, player_name: str) -> Optional[dict]:
+def _load_target_player(conn: db.Connection, player_name: str) -> Optional[dict]:
     """Load target player's vector and metadata"""
     
     query = f"""
@@ -125,7 +125,7 @@ def _load_target_player(conn: sqlite3.Connection, player_name: str) -> Optional[
 
 
 def _load_candidate_pool(
-    conn: sqlite3.Connection,
+    conn: db.Connection,
     target_role: str,
     target_player: str,
     allowed_nationalities: Optional[list[str]],
@@ -183,7 +183,7 @@ def _load_candidate_pool(
     return candidates
 
 
-def get_player_info(conn: sqlite3.Connection, player_name: str) -> Optional[dict]:
+def get_player_info(conn: db.Connection, player_name: str) -> Optional[dict]:
     """Get player summary for API responses"""
     
     query = """
@@ -212,7 +212,7 @@ def get_player_info(conn: sqlite3.Connection, player_name: str) -> Optional[dict
     }
 
 
-def list_available_nationalities(conn: sqlite3.Connection) -> list[str]:
+def list_available_nationalities(conn: db.Connection) -> list[str]:
     """Get list of all nationalities in database"""
     
     rows = conn.execute("""
@@ -227,7 +227,7 @@ def list_available_nationalities(conn: sqlite3.Connection) -> list[str]:
 # Add to end_applications/player_replacement_util.py
 
 def get_player_replacements_smart(
-    conn: sqlite3.Connection,
+    conn: db.Connection,
     target_player: str,
     top_k: int = 10,
     allowed_nationalities: Optional[list[str]] = None,

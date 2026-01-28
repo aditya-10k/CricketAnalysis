@@ -10,7 +10,7 @@ FIXES:
 ✅ Realistic selection logic
 """
 
-import sqlite3
+import db.session as db
 import numpy as np
 from typing import Optional, Dict, List, Tuple
 from datetime import datetime, timedelta
@@ -79,7 +79,7 @@ def _is_bowler(player: Dict) -> bool:
 
 
 def optimize_best_xi(
-    conn: sqlite3.Connection,
+    conn: db.Connection,
     home_squad: List[str],
     away_squad: List[str],
     venue: Optional[str] = None,
@@ -144,7 +144,7 @@ def optimize_best_xi(
 
 
 
-def _analyze_away_squad(conn: sqlite3.Connection, away_squad: List[str], venue: Optional[str] = None) -> Dict:
+def _analyze_away_squad(conn: db.Connection, away_squad: List[str], venue: Optional[str] = None) -> Dict:
     """
     Analyze the away squad to understand their strengths.
     
@@ -193,7 +193,7 @@ def _analyze_away_squad(conn: sqlite3.Connection, away_squad: List[str], venue: 
         'venue': venue
     }
 
-def _get_player_data(conn: sqlite3.Connection, player: str) -> Optional[Dict]:
+def _get_player_data(conn: db.Connection, player: str) -> Optional[Dict]:
     """
     Get player's basic data from database.
     
@@ -332,7 +332,7 @@ def _calculate_team_synergy(home_candidates: List[Dict], constraints: Dict) -> O
 
 
 def _get_candidate_players(
-    conn: sqlite3.Connection,
+    conn: db.Connection,
     player_pool: List[str],
     constraints: Dict
 ) -> List[Dict]:
@@ -396,7 +396,7 @@ def _get_candidate_players(
     return candidates
 
 
-def _get_avg_batting_position(conn: sqlite3.Connection, player: str) -> float:
+def _get_avg_batting_position(conn: db.Connection, player: str) -> float:
     """
     Calculate average batting position based on wicket sequence.
     
@@ -421,7 +421,7 @@ def _get_avg_batting_position(conn: sqlite3.Connection, player: str) -> float:
     
     try:
         striker_entries = conn.execute(query, (player,)).fetchall()
-    except sqlite3.OperationalError:
+    except db.OperationalError:
         # Table doesn't exist or column name is different
         return 999.0
     
@@ -443,7 +443,7 @@ def _get_avg_batting_position(conn: sqlite3.Connection, player: str) -> float:
         
         try:
             wickets_before = conn.execute(wicket_query, (match_id, innings, first_ball)).fetchone()[0]
-        except (sqlite3.OperationalError, TypeError):
+        except (db.OperationalError, TypeError):
             # Column might not exist, skip this entry
             continue
         
@@ -465,7 +465,7 @@ def _get_avg_batting_position(conn: sqlite3.Connection, player: str) -> float:
             try:
                 batters_before = conn.execute(opener_query, (match_id, innings, first_ball)).fetchone()[0]
                 position = 1 if batters_before == 0 else 2
-            except (sqlite3.OperationalError, TypeError):
+            except (db.OperationalError, TypeError):
                 position = 1  # Default to opener
         else:
             # Position based on wickets
@@ -480,7 +480,7 @@ def _get_avg_batting_position(conn: sqlite3.Connection, player: str) -> float:
 
 
 def _apply_matchup_adjustments(
-    conn: sqlite3.Connection,
+    conn: db.Connection,
     home_candidates: List[Dict],
     away_analysis: Dict,
     venue: Optional[str]
@@ -668,7 +668,7 @@ def _greedy_select_xi_with_positions(candidates: List[Dict], constraints: Dict) 
 
 
 def _optimize_with_swaps(
-    conn: sqlite3.Connection,
+    conn: db.Connection,
     current_team: List[Dict],
     all_candidates: List[Dict],
     constraints: Dict,

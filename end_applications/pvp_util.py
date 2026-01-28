@@ -10,7 +10,7 @@ FIXES:
 - SR normalization: Documented as T20 heuristic
 """
 
-import sqlite3
+import db.session as db
 import numpy as np
 from typing import Optional, Dict, List
 
@@ -23,7 +23,7 @@ T20_PRIOR_WICKET_RATE = 0.045         # Updated: 4.5%
 
 
 def get_head_to_head(
-    conn: sqlite3.Connection,
+    conn: db.Connection,
     striker: str,
     bowler: str,
     venue: Optional[str] = None
@@ -122,7 +122,7 @@ def get_head_to_head(
 
 
 def predict_matchup(
-    conn: sqlite3.Connection,
+    conn: db.Connection,
     striker: str,
     bowler: str,
     venue: Optional[str] = None,
@@ -247,7 +247,7 @@ def predict_matchup(
 
 
 def get_bowler_vs_batters(
-    conn: sqlite3.Connection,
+    conn: db.Connection,
     bowler: str,
     min_balls: int = 12,
     top_k: int = 10
@@ -302,7 +302,7 @@ def get_bowler_vs_batters(
 
 
 def get_venue_specific_h2h(
-    conn: sqlite3.Connection,
+    conn: db.Connection,
     striker: str,
     bowler: str
 ) -> List[Dict]:
@@ -346,7 +346,7 @@ def get_venue_specific_h2h(
 
 
 def _get_player_baseline(
-    conn: sqlite3.Connection, 
+    conn: db.Connection, 
     player: str, 
     is_batting: bool,
     venue: Optional[str] = None
@@ -422,7 +422,7 @@ def _get_player_baseline(
 
 
 def _get_style_matchup(
-    conn: sqlite3.Connection,
+    conn: db.Connection,
     striker: str,
     bowler: str
 ) -> Optional[Dict]:
