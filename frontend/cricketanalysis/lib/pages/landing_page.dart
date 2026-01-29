@@ -8,6 +8,8 @@ class LandingPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isMobile = MediaQuery.of(context).size.width <= 800;
+          
     return Scaffold(
       backgroundColor: Colors.white,
       body: Column(
@@ -47,14 +49,17 @@ class LandingPage extends StatelessWidget {
             child: Center(
               child: Container(
                 constraints: const BoxConstraints(maxWidth: 1400),
-                padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 40),
+                padding: EdgeInsets.symmetric(
+                  horizontal: isMobile ? 20 : 40,
+                  vertical: isMobile ? 20 : 40,
+                ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
+                    Text(
                       'Cricket Analysis Dashboard',
                       style: TextStyle(
-                        fontSize: 32,
+                        fontSize: isMobile ? 24 : 32,
                         fontWeight: FontWeight.w600,
                         color: Colors.black87,
                         letterSpacing: -0.5,
@@ -70,65 +75,114 @@ class LandingPage extends StatelessWidget {
                     ),
                     const SizedBox(height: 40),
                     Expanded(
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Expanded(
-                            child: Column(
-                              children: [
-                                _buildOptionItem(
-                                  context,
-                                  title: 'Player Info',
-                                  description: 'Search and view detailed player information',
-                                  onTap: () => context.go('/player-info'),
-                                ),
-                                _buildOptionItem(
-                                  context,
-                                  title: 'Team ELO History',
-                                  description: 'View team ELO rating history with graphs',
-                                  onTap: () => context.go('/team-elo'),
-                                ),
-                                _buildOptionItem(
-                                  context,
-                                  title: 'Player Replacement',
-                                  description: 'Find suitable player replacements',
-                                  onTap: () => context.go('/player-replacement'),
-                                ),
-                                _buildOptionItem(
-                                  context,
-                                  title: 'Player vs Player',
-                                  description: 'Predict matchup outcomes between players',
-                                  onTap: () => context.go('/pvp'),
-                                ),
-                              ],
-                            ),
-                          ),
-                          const SizedBox(width: 40),
-                          Expanded(
-                            child: Column(
-                              children: [
-                                _buildOptionItem(
-                                  context,
-                                  title: 'Player vs Team',
-                                  description: 'Analyze player performance against teams',
-                                  onTap: () => context.go('/pvt'),
-                                ),
-                                _buildOptionItem(
-                                  context,
-                                  title: 'Synergy',
-                                  description: 'Evaluate batting/bowling pair synergy',
-                                  onTap: () => context.go('/synergy'),
-                                ),
-                                _buildOptionItem(
-                                  context,
-                                  title: 'Best XI',
-                                  description: 'Optimize playing XI for two squads',
-                                  onTap: () => context.go('/best-xi'),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
+                      child: SingleChildScrollView(
+                        child: isMobile
+                            ? Column(
+                                children: [
+                                  _buildOptionItem(
+                                    context,
+                                    title: 'Player Info',
+                                    description: 'Search and view detailed player information',
+                                    onTap: () => context.go('/player-info'),
+                                  ),
+                                  _buildOptionItem(
+                                    context,
+                                    title: 'Team ELO History',
+                                    description: 'View team ELO rating history with graphs',
+                                    onTap: () => context.go('/team-elo'),
+                                  ),
+                                  _buildOptionItem(
+                                    context,
+                                    title: 'Player Replacement',
+                                    description: 'Find suitable player replacements',
+                                    onTap: () => context.go('/player-replacement'),
+                                  ),
+                                  _buildOptionItem(
+                                    context,
+                                    title: 'Player vs Player',
+                                    description: 'Predict matchup outcomes between players',
+                                    onTap: () => context.go('/pvp'),
+                                  ),
+                                  _buildOptionItem(
+                                    context,
+                                    title: 'Player vs Team',
+                                    description: 'Analyze player performance against teams',
+                                    onTap: () => context.go('/pvt'),
+                                  ),
+                                  _buildOptionItem(
+                                    context,
+                                    title: 'Synergy',
+                                    description: 'Evaluate batting/bowling pair synergy',
+                                    onTap: () => context.go('/synergy'),
+                                  ),
+                                  _buildOptionItem(
+                                    context,
+                                    title: 'Best XI',
+                                    description: 'Optimize playing XI for two squads',
+                                    onTap: () => context.go('/best-xi'),
+                                  ),
+                                ],
+                              )
+                            : Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Expanded(
+                                    child: Column(
+                                      children: [
+                                        _buildOptionItem(
+                                          context,
+                                          title: 'Player Info',
+                                          description: 'Search and view detailed player information',
+                                          onTap: () => context.go('/player-info'),
+                                        ),
+                                        _buildOptionItem(
+                                          context,
+                                          title: 'Team ELO History',
+                                          description: 'View team ELO rating history with graphs',
+                                          onTap: () => context.go('/team-elo'),
+                                        ),
+                                        _buildOptionItem(
+                                          context,
+                                          title: 'Player Replacement',
+                                          description: 'Find suitable player replacements',
+                                          onTap: () => context.go('/player-replacement'),
+                                        ),
+                                        _buildOptionItem(
+                                          context,
+                                          title: 'Player vs Player',
+                                          description: 'Predict matchup outcomes between players',
+                                          onTap: () => context.go('/pvp'),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  const SizedBox(width: 40),
+                                  Expanded(
+                                    child: Column(
+                                      children: [
+                                        _buildOptionItem(
+                                          context,
+                                          title: 'Player vs Team',
+                                          description: 'Analyze player performance against teams',
+                                          onTap: () => context.go('/pvt'),
+                                        ),
+                                        _buildOptionItem(
+                                          context,
+                                          title: 'Synergy',
+                                          description: 'Evaluate batting/bowling pair synergy',
+                                          onTap: () => context.go('/synergy'),
+                                        ),
+                                        _buildOptionItem(
+                                          context,
+                                          title: 'Best XI',
+                                          description: 'Optimize playing XI for two squads',
+                                          onTap: () => context.go('/best-xi'),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
                       ),
                     ),
                   ],
@@ -147,40 +201,44 @@ class LandingPage extends StatelessWidget {
     required String description,
     required VoidCallback onTap,
   }) {
-    return Expanded(
-      child: InkWell(
-        onTap: onTap,
-        hoverColor: Colors.black.withOpacity(0.02),
-        child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
-          decoration: const BoxDecoration(
-            border: Border(
-              bottom: BorderSide(color: Colors.black12, width: 1),
-            ),
+    return InkWell(
+      onTap: onTap,
+      hoverColor: Colors.black.withOpacity(0.02),
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
+        decoration: const BoxDecoration(
+          border: Border(
+            bottom: BorderSide(color: Colors.black12, width: 1),
           ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisAlignment: MainAxisAlignment.center,
+        ),
+        child: Row(
             children: [
-              Text(
-                title,
-                style: const TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w600,
-                  color: _accentColor,
-                ),
-              ),
-              const SizedBox(height: 6),
-              Text(
-                description,
-                style: const TextStyle(
-                  fontSize: 14,
-                  color: Colors.black54,
-                  height: 1.4,
-                ),
-              ),
+                 Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text(
+                            title,
+                            style: const TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.w600,
+                              color: _accentColor,
+                            ),
+                          ),
+                          const SizedBox(height: 6),
+                          Text(
+                            description,
+                            style: const TextStyle(
+                              fontSize: 14,
+                              color: Colors.black54,
+                              height: 1.4,
+                            ),
+                          ),
+                        ],
+                      ),
+                 ),
             ],
-          ),
         ),
       ),
     );

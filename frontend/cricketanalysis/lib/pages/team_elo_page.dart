@@ -2,6 +2,7 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_typeahead/flutter_typeahead.dart';
+import 'package:go_router/go_router.dart';
 
 import '../bloc/team_elo/team_elo_bloc.dart';
 import '../bloc/teams/teams_bloc.dart';
@@ -39,13 +40,15 @@ class _TeamEloPageState extends State<TeamEloPage> {
 
   @override
   Widget build(BuildContext context) {
+    final isMobile = MediaQuery.of(context).size.width <= 800;
+
     return Scaffold(
       backgroundColor: Colors.white,
       body: Column(
         children: [
           // Header
           Container(
-            height: 64,
+            height: isMobile ? null : 64,
             decoration: const BoxDecoration(
               color: Colors.white,
               border: Border(
@@ -55,103 +58,223 @@ class _TeamEloPageState extends State<TeamEloPage> {
             child: Center(
               child: Container(
                 constraints: const BoxConstraints(maxWidth: 1200),
-                padding: const EdgeInsets.symmetric(horizontal: 40),
-                child: Row(
-                  children: [
-                    const Text(
-                      'Team ELO History',
-                      style: TextStyle(
-                        color: Colors.black87,
-                        fontWeight: FontWeight.w600,
-                        fontSize: 18,
-                      ),
-                    ),
-                    const Spacer(),
-                    BlocBuilder<TeamsBloc, TeamsState>(
-                      builder: (context, teamsState) {
-                        if (teamsState is TeamsLoaded) {
-                          return SizedBox(
-                            width: 300,
-                            child: TypeAheadField<String>(
-                              builder: (context, controller, focusNode) {
-                                controller.text = _teamController.text;
-                                return TextField(
-                                  controller: controller,
-                                  focusNode: focusNode,
-                                  decoration: InputDecoration(
-                                    hintText: 'Enter team name',
-                                    hintStyle: const TextStyle(color: Colors.black38, fontSize: 14),
-                                    border: OutlineInputBorder(
-                                      borderRadius: BorderRadius.circular(4),
-                                      borderSide: const BorderSide(color: Colors.black12),
-                                    ),
-                                    enabledBorder: OutlineInputBorder(
-                                      borderRadius: BorderRadius.circular(4),
-                                      borderSide: const BorderSide(color: Colors.black12),
-                                    ),
-                                    focusedBorder: OutlineInputBorder(
-                                      borderRadius: BorderRadius.circular(4),
-                                      borderSide: const BorderSide(color: _accentColor, width: 1.5),
-                                    ),
-                                    contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                                    isDense: true,
-                                  ),
-                                  onChanged: (value) => _teamController.text = value,
-                                );
-                              },
-                              suggestionsCallback: (pattern) {
-                                return teamsState.teams
-                                    .where((team) => team.toLowerCase().contains(pattern.toLowerCase()))
-                                    .where((team) => !_loadedTeams.any((t) => t.team == team))
-                                    .toList();
-                              },
-                              itemBuilder: (context, suggestion) {
-                                return ListTile(
-                                  dense: true,
-                                  title: Text(suggestion, style: const TextStyle(fontSize: 14)),
-                                );
-                              },
-                              onSelected: (suggestion) {
-                                _teamController.text = suggestion;
-                                _loadTeam(suggestion);
-                              },
-                            ),
-                          );
-                        }
-                        return const SizedBox();
-                      },
-                    ),
-                    const SizedBox(width: 12),
-                    ElevatedButton(
-                      onPressed: _isLoading
-                          ? null
-                          : () {
-                              if (_teamController.text.isNotEmpty) {
-                                _loadTeam(_teamController.text.trim());
-                              }
-                            },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: _accentColor,
-                        foregroundColor: Colors.white,
-                        elevation: 0,
-                        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(4),
-                        ),
-                      ),
-                      child: _isLoading
-                          ? const SizedBox(
-                              width: 16,
-                              height: 16,
-                              child: CircularProgressIndicator(
-                                color: Colors.white,
-                                strokeWidth: 2,
+                padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 12),
+                child: isMobile
+                    ? Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Row(
+                            children: [
+                              IconButton(
+                                icon: const Icon(Icons.arrow_back, color: Colors.black87),
+                                onPressed: () {
+                                  if (context.canPop()) {
+                                    context.pop();
+                                  } else {
+                                    context.go('/');
+                                  }
+                                },
                               ),
-                            )
-                          : const Text('Add Team'),
-                    ),
-                  ],
-                ),
+                              const Expanded(
+                                child: Center(
+                                  child: Text(
+                                    'Team ELO History',
+                                    style: TextStyle(
+                                      color: Colors.black87,
+                                      fontWeight: FontWeight.w600,
+                                      fontSize: 18,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 48), // Balance the icon button
+                            ],
+                          ),
+                          const SizedBox(height: 12),
+                          BlocBuilder<TeamsBloc, TeamsState>(
+                            builder: (context, teamsState) {
+                              if (teamsState is TeamsLoaded) {
+                                return Row(
+                                  children: [
+                                    Expanded(
+                                      child: TypeAheadField<String>(
+                                        builder: (context, controller, focusNode) {
+                                          controller.text = _teamController.text;
+                                          return TextField(
+                                            controller: controller,
+                                            focusNode: focusNode,
+                                            decoration: InputDecoration(
+                                              hintText: 'Enter team name',
+                                              hintStyle: const TextStyle(color: Colors.black38, fontSize: 14),
+                                              border: OutlineInputBorder(
+                                                borderRadius: BorderRadius.circular(4),
+                                                borderSide: const BorderSide(color: Colors.black12),
+                                              ),
+                                              enabledBorder: OutlineInputBorder(
+                                                borderRadius: BorderRadius.circular(4),
+                                                borderSide: const BorderSide(color: Colors.black12),
+                                              ),
+                                              focusedBorder: OutlineInputBorder(
+                                                borderRadius: BorderRadius.circular(4),
+                                                borderSide: const BorderSide(color: _accentColor, width: 1.5),
+                                              ),
+                                              contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                                              isDense: true,
+                                            ),
+                                            onChanged: (value) => _teamController.text = value,
+                                          );
+                                        },
+                                        suggestionsCallback: (pattern) {
+                                          return teamsState.teams
+                                              .where((team) => team.toLowerCase().contains(pattern.toLowerCase()))
+                                              .where((team) => !_loadedTeams.any((t) => t.team == team))
+                                              .toList();
+                                        },
+                                        itemBuilder: (context, suggestion) {
+                                          return ListTile(
+                                            dense: true,
+                                            title: Text(suggestion, style: const TextStyle(fontSize: 14)),
+                                          );
+                                        },
+                                        onSelected: (suggestion) {
+                                          _teamController.text = suggestion;
+                                          _loadTeam(suggestion);
+                                        },
+                                      ),
+                                    ),
+                                    const SizedBox(width: 12),
+                                    ElevatedButton(
+                                      onPressed: _isLoading
+                                          ? null
+                                          : () {
+                                              if (_teamController.text.isNotEmpty) {
+                                                _loadTeam(_teamController.text.trim());
+                                              }
+                                            },
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: _accentColor,
+                                        foregroundColor: Colors.white,
+                                        elevation: 0,
+                                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(4),
+                                        ),
+                                      ),
+                                      child: _isLoading
+                                          ? const SizedBox(
+                                              width: 16,
+                                              height: 16,
+                                              child: CircularProgressIndicator(
+                                                color: Colors.white,
+                                                strokeWidth: 2,
+                                              ),
+                                            )
+                                          : const Icon(Icons.add, size: 20),
+                                    ),
+                                  ],
+                                );
+                              }
+                              return const SizedBox();
+                            },
+                          ),
+                        ],
+                      )
+                    : Row(
+                        children: [
+                          const Text(
+                            'Team ELO History',
+                            style: TextStyle(
+                              color: Colors.black87,
+                              fontWeight: FontWeight.w600,
+                              fontSize: 18,
+                            ),
+                          ),
+                          const Spacer(),
+                          BlocBuilder<TeamsBloc, TeamsState>(
+                            builder: (context, teamsState) {
+                              if (teamsState is TeamsLoaded) {
+                                return SizedBox(
+                                  width: 300,
+                                  child: TypeAheadField<String>(
+                                    builder: (context, controller, focusNode) {
+                                      controller.text = _teamController.text;
+                                      return TextField(
+                                        controller: controller,
+                                        focusNode: focusNode,
+                                        decoration: InputDecoration(
+                                          hintText: 'Enter team name',
+                                          hintStyle: const TextStyle(color: Colors.black38, fontSize: 14),
+                                          border: OutlineInputBorder(
+                                            borderRadius: BorderRadius.circular(4),
+                                            borderSide: const BorderSide(color: Colors.black12),
+                                          ),
+                                          enabledBorder: OutlineInputBorder(
+                                            borderRadius: BorderRadius.circular(4),
+                                            borderSide: const BorderSide(color: Colors.black12),
+                                          ),
+                                          focusedBorder: OutlineInputBorder(
+                                            borderRadius: BorderRadius.circular(4),
+                                            borderSide: const BorderSide(color: _accentColor, width: 1.5),
+                                          ),
+                                          contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                                          isDense: true,
+                                        ),
+                                        onChanged: (value) => _teamController.text = value,
+                                      );
+                                    },
+                                    suggestionsCallback: (pattern) {
+                                      return teamsState.teams
+                                          .where((team) => team.toLowerCase().contains(pattern.toLowerCase()))
+                                          .where((team) => !_loadedTeams.any((t) => t.team == team))
+                                          .toList();
+                                    },
+                                    itemBuilder: (context, suggestion) {
+                                      return ListTile(
+                                        dense: true,
+                                        title: Text(suggestion, style: const TextStyle(fontSize: 14)),
+                                      );
+                                    },
+                                    onSelected: (suggestion) {
+                                      _teamController.text = suggestion;
+                                      _loadTeam(suggestion);
+                                    },
+                                  ),
+                                );
+                              }
+                              return const SizedBox();
+                            },
+                          ),
+                          const SizedBox(width: 12),
+                          ElevatedButton(
+                            onPressed: _isLoading
+                                ? null
+                                : () {
+                                    if (_teamController.text.isNotEmpty) {
+                                      _loadTeam(_teamController.text.trim());
+                                    }
+                                  },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: _accentColor,
+                              foregroundColor: Colors.white,
+                              elevation: 0,
+                              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                            ),
+                            child: _isLoading
+                                ? const SizedBox(
+                                    width: 16,
+                                    height: 16,
+                                    child: CircularProgressIndicator(
+                                      color: Colors.white,
+                                      strokeWidth: 2,
+                                    ),
+                                  )
+                                : const Text('Add Team'),
+                          ),
+                        ],
+                      ),
               ),
             ),
           ),
@@ -190,7 +313,7 @@ class _TeamEloPageState extends State<TeamEloPage> {
                         style: TextStyle(fontSize: 15, color: Colors.black38),
                       ),
                     )
-                  : _buildMultiTeamChart(),
+                  : _buildMultiTeamChart(isMobile),
             ),
           ),
         ],
@@ -212,11 +335,11 @@ class _TeamEloPageState extends State<TeamEloPage> {
     context.read<TeamEloBloc>().add(LoadTeamElo(teamName));
   }
 
-  Widget _buildMultiTeamChart() {
+  Widget _buildMultiTeamChart(bool isMobile) {
     return Center(
       child: Container(
         constraints: const BoxConstraints(maxWidth: 1200),
-        padding: const EdgeInsets.all(40),
+        padding: EdgeInsets.all(isMobile ? 16 : 40),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -254,7 +377,7 @@ class _TeamEloPageState extends State<TeamEloPage> {
                 ),
               ],
             ),
-            const SizedBox(height: 40),
+            SizedBox(height: isMobile ? 20 : 40),
             Expanded(
               child: _buildChart(),
             ),

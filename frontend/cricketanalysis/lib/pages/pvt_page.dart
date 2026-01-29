@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_typeahead/flutter_typeahead.dart';
+import 'package:go_router/go_router.dart';
 
 import '../bloc/pvt/pvt_bloc.dart';
 import '../bloc/players/players_bloc.dart';
@@ -33,6 +34,8 @@ class _PvtPageState extends State<PvtPage> {
 
   @override
   Widget build(BuildContext context) {
+    final isMobile = MediaQuery.of(context).size.width <= 900;
+
     return Scaffold(
       backgroundColor: Colors.white,
       body: Column(
@@ -50,9 +53,21 @@ class _PvtPageState extends State<PvtPage> {
               child: Container(
                 constraints: const BoxConstraints(maxWidth: 1200),
                 padding: const EdgeInsets.symmetric(horizontal: 40),
-                child: const Row(
+                child: Row(
                   children: [
-                    Text(
+                    if (isMobile)
+                      IconButton(
+                        icon: const Icon(Icons.arrow_back, color: Colors.black87),
+                        onPressed: () {
+                          if (context.canPop()) {
+                            context.pop();
+                          } else {
+                            context.go('/');
+                          }
+                        },
+                      ),
+                    if (isMobile) const SizedBox(width: 8),
+                    const Text(
                       'Player vs Team',
                       style: TextStyle(
                         color: Colors.black87,
@@ -72,25 +87,42 @@ class _PvtPageState extends State<PvtPage> {
                 return BlocBuilder<TeamsBloc, TeamsState>(
                   builder: (context, teamsState) {
                     if (playersState is PlayersLoaded && teamsState is TeamsLoaded) {
-                      return Center(
-                        child: Container(
-                          constraints: const BoxConstraints(maxWidth: 1200),
-                          padding: const EdgeInsets.all(40),
-                          child: Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              SizedBox(
-                                width: 400,
-                                child: _buildForm(playersState, teamsState),
-                              ),
-                              const SizedBox(width: 40),
-                              Expanded(
-                                child: _buildResults(),
-                              ),
-                            ],
+                      if (isMobile) {
+                        return SingleChildScrollView(
+                          child: Padding(
+                            padding: const EdgeInsets.all(20),
+                            child: Column(
+                              children: [
+                                _buildForm(playersState, teamsState, isMobile: true),
+                                const SizedBox(height: 40),
+                                const Divider(),
+                                const SizedBox(height: 20),
+                                _buildResults(),
+                              ],
+                            ),
                           ),
-                        ),
-                      );
+                        );
+                      } else {
+                        return Center(
+                          child: Container(
+                            constraints: const BoxConstraints(maxWidth: 1200),
+                            padding: const EdgeInsets.all(40),
+                            child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                SizedBox(
+                                  width: 400,
+                                  child: _buildForm(playersState, teamsState),
+                                ),
+                                const SizedBox(width: 40),
+                                Expanded(
+                                  child: _buildResults(),
+                                ),
+                              ],
+                            ),
+                          ),
+                        );
+                      }
                     } else if (playersState is PlayersError || teamsState is TeamsError) {
                       return Center(
                         child: Text(
@@ -110,7 +142,7 @@ class _PvtPageState extends State<PvtPage> {
     );
   }
 
-  Widget _buildForm(PlayersLoaded playersState, TeamsLoaded teamsState) {
+  Widget _buildForm(PlayersLoaded playersState, TeamsLoaded teamsState, {bool isMobile = false}) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -283,7 +315,7 @@ class _PvtPageState extends State<PvtPage> {
             });
           },
         ),
-        const Spacer(),
+        if (isMobile) const SizedBox(height: 24) else const Spacer(),
         ElevatedButton(
           onPressed: _getPerformance,
           style: ElevatedButton.styleFrom(

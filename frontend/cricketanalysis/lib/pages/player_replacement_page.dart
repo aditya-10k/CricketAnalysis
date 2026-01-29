@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_typeahead/flutter_typeahead.dart';
+import 'package:go_router/go_router.dart';
 
 import '../bloc/player_replacement/player_replacement_bloc.dart';
 import '../bloc/players/players_bloc.dart';
@@ -32,6 +33,8 @@ class _PlayerReplacementPageState extends State<PlayerReplacementPage> {
 
   @override
   Widget build(BuildContext context) {
+    final isMobile = MediaQuery.of(context).size.width <= 900;
+
     return Scaffold(
       backgroundColor: Colors.white,
       body: Column(
@@ -51,6 +54,18 @@ class _PlayerReplacementPageState extends State<PlayerReplacementPage> {
                 padding: const EdgeInsets.symmetric(horizontal: 40),
                 child: Row(
                   children: [
+                    if (isMobile)
+                      IconButton(
+                        icon: const Icon(Icons.arrow_back, color: Colors.black87),
+                        onPressed: () {
+                          if (context.canPop()) {
+                            context.pop();
+                          } else {
+                            context.go('/');
+                          }
+                        },
+                      ),
+                    if (isMobile) const SizedBox(width: 8),
                     Image.asset("assets/image-removebg-preview.png", height: 60,),
                     SizedBox(width: 20,),
                     const Text(
@@ -66,38 +81,49 @@ class _PlayerReplacementPageState extends State<PlayerReplacementPage> {
               ),
             ),
           ),
-          Text(
-                      'Player Replacement',
-                      style: TextStyle(
-                        color: Colors.black87,
-                        fontWeight: FontWeight.w600,
-                        fontSize: 18,
-                      ),
-                    ),
-          // Content
           Expanded(
             child: BlocBuilder<PlayersBloc, PlayersState>(
               builder: (context, playersState) {
                 if (playersState is PlayersLoaded) {
-                  return Center(
-                    child: Container(
-                      constraints: const BoxConstraints(maxWidth: 1400),
-                      padding: const EdgeInsets.all(40),
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          SizedBox(
-                            width: 400,
-                            child: _buildSelectionPanel(playersState),
-                          ),
-                          const SizedBox(width: 40),
-                          Expanded(
-                            child: _buildResultsPanel(),
-                          ),
-                        ],
+                  if (isMobile) {
+                    return SingleChildScrollView(
+                      child: Padding(
+                        padding: const EdgeInsets.all(20),
+                        child: Column(
+                          children: [
+                            _buildSelectionPanel(playersState, isMobile: true),
+                            const SizedBox(height: 40),
+                            const Divider(),
+                            const SizedBox(height: 20),
+                            SizedBox(
+                              height: 600, // Fixed height for results on mobile to allow scrolling inside or use PrimaryScrollController
+                              child: _buildResultsPanel(),
+                            ),
+                          ],
+                        ),
                       ),
-                    ),
-                  );
+                    );
+                  } else {
+                    return Center(
+                      child: Container(
+                        constraints: const BoxConstraints(maxWidth: 1400),
+                        padding: const EdgeInsets.all(40),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            SizedBox(
+                              width: 400,
+                              child: _buildSelectionPanel(playersState),
+                            ),
+                            const SizedBox(width: 40),
+                            Expanded(
+                              child: _buildResultsPanel(),
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  }
                 } else if (playersState is PlayersError) {
                   return Center(
                     child: Text(
@@ -115,17 +141,25 @@ class _PlayerReplacementPageState extends State<PlayerReplacementPage> {
     );
   }
 
-  Widget _buildSelectionPanel(PlayersLoaded playersState) {
+  Widget _buildSelectionPanel(PlayersLoaded playersState, {bool isMobile = false}) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
+      mainAxisSize: isMobile ? MainAxisSize.min : MainAxisSize.max,
       children: [
-        const Text(
-          'Find Replacement',
-          style: TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.w600,
-            color: Colors.black87,
-          ),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            const Text(
+              'Find Replacement',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w600,
+                color: Colors.black87,
+              ),
+            ),
+             if (isMobile)
+              IconButton(onPressed: (){}, icon: Icon(Icons.expand_more)) // Optional: Could minimize
+          ],
         ),
         const SizedBox(height: 24),
         TypeAheadField<String>(
@@ -245,7 +279,7 @@ class _PlayerReplacementPageState extends State<PlayerReplacementPage> {
         ),
         const SizedBox(height: 12),
         _buildExcludePlayersField(),
-        const Spacer(),
+        if (isMobile) const SizedBox(height: 24) else const Spacer(),
         ElevatedButton(
           onPressed: _findReplacement,
           style: ElevatedButton.styleFrom(

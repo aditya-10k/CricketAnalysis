@@ -19,6 +19,7 @@ import 'pages/pvp_page.dart';
 import 'pages/pvt_page.dart';
 import 'pages/synergy_page.dart';
 import 'pages/best_xi_page.dart';
+import 'pages/splash_screen.dart';
 
 void main() {
   runApp(const MyApp());
@@ -77,8 +78,12 @@ class MyApp extends StatelessWidget {
 }
 
 final GoRouter _router = GoRouter(
-  initialLocation: '/',
+  initialLocation: '/splash',
   routes: [
+    GoRoute(
+      path: '/splash',
+      builder: (context, state) => const SplashScreen(),
+    ),
     GoRoute(
       path: '/',
       builder: (context, state) => const LandingPage(),

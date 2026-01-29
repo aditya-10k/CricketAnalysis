@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_typeahead/flutter_typeahead.dart';
+import 'package:go_router/go_router.dart';
 
 import '../bloc/best_xi/best_xi_bloc.dart';
 import '../bloc/players/players_bloc.dart';
@@ -41,6 +42,8 @@ class _BestXiPageState extends State<BestXiPage> {
 
   @override
   Widget build(BuildContext context) {
+    final isMobile = MediaQuery.of(context).size.width <= 1000;
+
     return Scaffold(
       backgroundColor: Colors.white,
       body: Column(
@@ -60,6 +63,18 @@ class _BestXiPageState extends State<BestXiPage> {
                 child:  Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
+                    if (isMobile)
+                      IconButton(
+                        icon: const Icon(Icons.arrow_back, color: Colors.black87),
+                        onPressed: () {
+                          if (context.canPop()) {
+                            context.pop();
+                          } else {
+                            context.go('/');
+                          }
+                        },
+                      ),
+                    if (isMobile) const SizedBox(width: 8),
                     Image.asset("assets/image-removebg-preview.png", height: 60,),
                     SizedBox(width: 20,),
                     const Text(
@@ -79,23 +94,43 @@ class _BestXiPageState extends State<BestXiPage> {
             child: BlocBuilder<PlayersBloc, PlayersState>(
               builder: (context, playersState) {
                 if (playersState is PlayersLoaded) {
-                  return Center(
-                    child: Container(
-                      constraints: const BoxConstraints(maxWidth: 1200),
-                      padding: const EdgeInsets.all(40),
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          SizedBox(
-                            width: 450,
-                            child: _buildForm(playersState),
-                          ),
-                          const SizedBox(width: 40),
-                          Expanded(child: _buildResults()),
-                        ],
+                  if (isMobile) {
+                     return SingleChildScrollView(
+                       child: Padding(
+                         padding: const EdgeInsets.all(20),
+                         child: Column(
+                           children: [
+                             _buildForm(playersState, isMobile: true),
+                             const SizedBox(height: 40),
+                             const Divider(),
+                             const SizedBox(height: 20),
+                             Container( // Limit height or let it expand if needed, but best XI results might be long.
+                                height: 800, 
+                                child: _buildResults()
+                             ),
+                           ],
+                         ),
+                       ),
+                     );
+                  } else {
+                    return Center(
+                      child: Container(
+                        constraints: const BoxConstraints(maxWidth: 1200),
+                        padding: const EdgeInsets.all(40),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            SizedBox(
+                              width: 450,
+                              child: _buildForm(playersState),
+                            ),
+                            const SizedBox(width: 40),
+                            Expanded(child: _buildResults()),
+                          ],
+                        ),
                       ),
-                    ),
-                  );
+                    );
+                  }
                 } else if (playersState is PlayersError) {
                   return Center(
                     child: Text(playersState.message, style: const TextStyle(color: _accentColor)),
@@ -110,7 +145,78 @@ class _BestXiPageState extends State<BestXiPage> {
     );
   }
 
-  Widget _buildForm(PlayersLoaded playersState) {
+  Widget _buildForm(PlayersLoaded playersState, {bool isMobile = false}) {
+    // If mobile, don't use Expanded/SingleChildScrollView since it's already in one.
+    // Instead, just use Column.
+    
+    Widget content = Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        _buildSquadSelector(
+          label: 'Home Squad',
+          controller: _homeController,
+          squad: _homeSquad,
+          playersState: playersState,
+          onAdd: (p) => setState(() => _homeSquad.add(p)),
+          onRemove: (p) => setState(() => _homeSquad.remove(p)),
+        ),
+        const SizedBox(height: 16),
+        _buildSquadSelector(
+          label: 'Away Squad',
+          controller: _awayController,
+          squad: _awaySquad,
+          playersState: playersState,
+          onAdd: (p) => setState(() => _awaySquad.add(p)),
+          onRemove: (p) => setState(() => _awaySquad.remove(p)),
+        ),
+        const SizedBox(height: 16),
+        TextField(
+          controller: _venueController,
+          decoration: _inputDecoration('Venue (Optional)'),
+        ),
+        const SizedBox(height: 16),
+        Row(
+          children: [
+            Expanded(
+              child: TextField(
+                controller: _maxOverseasController,
+                decoration: _inputDecoration('Max Overseas'),
+                keyboardType: TextInputType.number,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: TextField(
+                controller: _minBowlersController,
+                decoration: _inputDecoration('Min Bowlers'),
+                keyboardType: TextInputType.number,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        Row(
+          children: [
+            Expanded(
+              child: TextField(
+                controller: _minBattersController,
+                decoration: _inputDecoration('Min Batters'),
+                keyboardType: TextInputType.number,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: TextField(
+                controller: _minConfidenceController,
+                decoration: _inputDecoration('Min Confidence (0-1)'),
+                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -119,77 +225,14 @@ class _BestXiPageState extends State<BestXiPage> {
           style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: Colors.black87),
         ),
         const SizedBox(height: 24),
-        Expanded(
-          child: SingleChildScrollView(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                _buildSquadSelector(
-                  label: 'Home Squad',
-                  controller: _homeController,
-                  squad: _homeSquad,
-                  playersState: playersState,
-                  onAdd: (p) => setState(() => _homeSquad.add(p)),
-                  onRemove: (p) => setState(() => _homeSquad.remove(p)),
-                ),
-                const SizedBox(height: 16),
-                _buildSquadSelector(
-                  label: 'Away Squad',
-                  controller: _awayController,
-                  squad: _awaySquad,
-                  playersState: playersState,
-                  onAdd: (p) => setState(() => _awaySquad.add(p)),
-                  onRemove: (p) => setState(() => _awaySquad.remove(p)),
-                ),
-                const SizedBox(height: 16),
-                TextField(
-                  controller: _venueController,
-                  decoration: _inputDecoration('Venue (Optional)'),
-                ),
-                const SizedBox(height: 16),
-                Row(
-                  children: [
-                    Expanded(
-                      child: TextField(
-                        controller: _maxOverseasController,
-                        decoration: _inputDecoration('Max Overseas'),
-                        keyboardType: TextInputType.number,
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: TextField(
-                        controller: _minBowlersController,
-                        decoration: _inputDecoration('Min Bowlers'),
-                        keyboardType: TextInputType.number,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                Row(
-                  children: [
-                    Expanded(
-                      child: TextField(
-                        controller: _minBattersController,
-                        decoration: _inputDecoration('Min Batters'),
-                        keyboardType: TextInputType.number,
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: TextField(
-                        controller: _minConfidenceController,
-                        decoration: _inputDecoration('Min Confidence (0-1)'),
-                        keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
+        if (isMobile)
+          content
+        else
+          Expanded(
+            child: SingleChildScrollView(
+              child: content,
             ),
           ),
-        ),
         const SizedBox(height: 16),
         ElevatedButton(
           onPressed: _runOptimizer,

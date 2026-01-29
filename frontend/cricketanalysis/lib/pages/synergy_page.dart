@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_typeahead/flutter_typeahead.dart';
+import 'package:go_router/go_router.dart';
 
 import '../bloc/players/players_bloc.dart';
 import '../bloc/synergy/synergy_bloc.dart';
@@ -33,6 +34,8 @@ class _SynergyPageState extends State<SynergyPage> {
 
   @override
   Widget build(BuildContext context) {
+    final isMobile = MediaQuery.of(context).size.width <= 900;
+
     return Scaffold(
       backgroundColor: Colors.white,
       body: Column(
@@ -49,9 +52,21 @@ class _SynergyPageState extends State<SynergyPage> {
               child: Container(
                 constraints: const BoxConstraints(maxWidth: 1200),
                 padding: const EdgeInsets.symmetric(horizontal: 40),
-                child: const Row(
+                child: Row(
                   children: [
-                    Text(
+                    if (isMobile)
+                      IconButton(
+                        icon: const Icon(Icons.arrow_back, color: Colors.black87),
+                        onPressed: () {
+                          if (context.canPop()) {
+                            context.pop();
+                          } else {
+                            context.go('/');
+                          }
+                        },
+                      ),
+                    if (isMobile) const SizedBox(width: 8),
+                    const Text(
                       'Synergy',
                       style: TextStyle(
                         color: Colors.black87,
@@ -68,23 +83,40 @@ class _SynergyPageState extends State<SynergyPage> {
             child: BlocBuilder<PlayersBloc, PlayersState>(
               builder: (context, playersState) {
                 if (playersState is PlayersLoaded) {
-                  return Center(
-                    child: Container(
-                      constraints: const BoxConstraints(maxWidth: 1200),
-                      padding: const EdgeInsets.all(40),
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          SizedBox(
-                            width: 400,
-                            child: _buildForm(playersState),
-                          ),
-                          const SizedBox(width: 40),
-                          Expanded(child: _buildResults()),
-                        ],
+                  if (isMobile) {
+                    return SingleChildScrollView(
+                      child: Padding(
+                        padding: const EdgeInsets.all(20),
+                        child: Column(
+                          children: [
+                            _buildForm(playersState, isMobile: true),
+                            const SizedBox(height: 40),
+                            const Divider(),
+                            const SizedBox(height: 20),
+                            _buildResults(),
+                          ],
+                        ),
                       ),
-                    ),
-                  );
+                    );
+                  } else {
+                    return Center(
+                      child: Container(
+                        constraints: const BoxConstraints(maxWidth: 1200),
+                        padding: const EdgeInsets.all(40),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            SizedBox(
+                              width: 400,
+                              child: _buildForm(playersState),
+                            ),
+                            const SizedBox(width: 40),
+                            Expanded(child: _buildResults()),
+                          ],
+                        ),
+                      ),
+                    );
+                  }
                 } else if (playersState is PlayersError) {
                   return Center(
                     child: Text(
@@ -102,7 +134,7 @@ class _SynergyPageState extends State<SynergyPage> {
     );
   }
 
-  Widget _buildForm(PlayersLoaded playersState) {
+  Widget _buildForm(PlayersLoaded playersState, {bool isMobile = false}) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -190,7 +222,7 @@ class _SynergyPageState extends State<SynergyPage> {
             controller: _phaseController,
             decoration: _inputDecoration('Phase (Optional)'),
           ),
-        const Spacer(),
+        if (isMobile) const SizedBox(height: 24) else const Spacer(),
         ElevatedButton(
           onPressed: _getSynergy,
           style: ElevatedButton.styleFrom(

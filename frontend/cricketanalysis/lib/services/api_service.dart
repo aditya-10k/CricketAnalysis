@@ -13,7 +13,7 @@ import '../models/synergy.dart';
 import '../models/best_xi.dart';
 
 class ApiService {
-  static const String baseUrl = 'http://127.0.0.1:8000';
+  static const String baseUrl = 'https://cricketanalysis.onrender.com';
 
   String _extractError(http.Response response) {
     try {

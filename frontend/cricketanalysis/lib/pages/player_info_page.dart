@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_typeahead/flutter_typeahead.dart';
+import 'package:go_router/go_router.dart';
 
 import '../bloc/player_info/player_info_bloc.dart';
 import '../bloc/players/players_bloc.dart';
@@ -12,6 +13,9 @@ class PlayerInfoPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Media query is needed here to decide on the back button
+    final isMobile = MediaQuery.of(context).size.width <= 800;
+
     return Scaffold(
       backgroundColor: Colors.white,
       body: Column(
@@ -31,6 +35,18 @@ class PlayerInfoPage extends StatelessWidget {
                 padding: const EdgeInsets.symmetric(horizontal: 40),
                 child: Row(
                   children: [
+                    if (isMobile)
+                      IconButton(
+                        icon: const Icon(Icons.arrow_back, color: Colors.black87),
+                        onPressed: () {
+                          if (context.canPop()) {
+                            context.pop();
+                          } else {
+                            context.go('/');
+                          }
+                        },
+                      ),
+                    if (isMobile) const SizedBox(width: 8),
                     Image.asset("assets/image-removebg-preview.png", height: 60,),
                     SizedBox(width: 20,),
                     const Text(
@@ -157,59 +173,70 @@ class PlayerInfoPage extends StatelessWidget {
   }
 
   Widget _buildPlayerInfo(BuildContext context, dynamic playerInfo) {
+    final isMobile = MediaQuery.of(context).size.width <= 800;
+
+    final leftColumn = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildSectionHeader('Player'),
+        _buildInfoRow('Name', playerInfo.player),
+        _buildInfoRow('Role', playerInfo.role),
+        _buildInfoRow('Nationality', playerInfo.nationality),
+        const SizedBox(height: 32),
+        _buildSectionHeader('Styles'),
+        _buildInfoRow('Batting', playerInfo.styles.batting),
+        if (playerInfo.styles.bowling != null)
+          _buildInfoRow('Bowling', playerInfo.styles.bowling!),
+        const SizedBox(height: 32),
+        _buildSectionHeader('Career'),
+        _buildInfoRow('Total Value Z', playerInfo.career.totalValueZ.toStringAsFixed(3)),
+        _buildInfoRow('Final Value', playerInfo.career.finalValue.toStringAsFixed(3)),
+        _buildInfoRow('Confidence', playerInfo.career.confidence.toStringAsFixed(3)),
+        _buildInfoRow('Days Since Last Match', playerInfo.career.daysSinceLastMatch.toString()),
+      ],
+    );
+
+    final rightColumn = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildSectionHeader('Exposure'),
+        _buildInfoRow('Balls Faced', playerInfo.exposure.ballsFaced.toString()),
+        _buildInfoRow('Balls Bowled', playerInfo.exposure.ballsBowled.toString()),
+        _buildInfoRow('Runs Scored', playerInfo.exposure.runsScored.toString()),
+        _buildInfoRow('Wickets Taken', playerInfo.exposure.wicketsTaken.toString()),
+        const SizedBox(height: 32),
+        _buildSectionHeader('Batting Position'),
+        _buildInfoRow('Average', playerInfo.battingPosition.avg.toStringAsFixed(2)),
+        _buildInfoRow('Median', playerInfo.battingPosition.median.toStringAsFixed(2)),
+        _buildInfoRow('Innings', playerInfo.battingPosition.innings.toString()),
+        const SizedBox(height: 32),
+        _buildSectionHeader('Recent Form'),
+        _buildInfoRow('Form Z', playerInfo.recentForm.formZ.toStringAsFixed(3)),
+        _buildInfoRow('Confidence', playerInfo.recentForm.confidence.toStringAsFixed(3)),
+        _buildInfoRow('As Of', playerInfo.recentForm.asOf),
+      ],
+    );
+
     return SingleChildScrollView(
       child: Container(
         constraints: const BoxConstraints(maxWidth: 900),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Expanded(
-              child: Column(
+        child: isMobile
+            ? Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _buildSectionHeader('Player'),
-                  _buildInfoRow('Name', playerInfo.player),
-                  _buildInfoRow('Role', playerInfo.role),
-                  _buildInfoRow('Nationality', playerInfo.nationality),
+                  leftColumn,
                   const SizedBox(height: 32),
-                  _buildSectionHeader('Styles'),
-                  _buildInfoRow('Batting', playerInfo.styles.batting),
-                  if (playerInfo.styles.bowling != null)
-                    _buildInfoRow('Bowling', playerInfo.styles.bowling!),
-                  const SizedBox(height: 32),
-                  _buildSectionHeader('Career'),
-                  _buildInfoRow('Total Value Z', playerInfo.career.totalValueZ.toStringAsFixed(3)),
-                  _buildInfoRow('Final Value', playerInfo.career.finalValue.toStringAsFixed(3)),
-                  _buildInfoRow('Confidence', playerInfo.career.confidence.toStringAsFixed(3)),
-                  _buildInfoRow('Days Since Last Match', playerInfo.career.daysSinceLastMatch.toString()),
+                  rightColumn,
                 ],
-              ),
-            ),
-            const SizedBox(width: 80),
-            Expanded(
-              child: Column(
+              )
+            : Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _buildSectionHeader('Exposure'),
-                  _buildInfoRow('Balls Faced', playerInfo.exposure.ballsFaced.toString()),
-                  _buildInfoRow('Balls Bowled', playerInfo.exposure.ballsBowled.toString()),
-                  _buildInfoRow('Runs Scored', playerInfo.exposure.runsScored.toString()),
-                  _buildInfoRow('Wickets Taken', playerInfo.exposure.wicketsTaken.toString()),
-                  const SizedBox(height: 32),
-                  _buildSectionHeader('Batting Position'),
-                  _buildInfoRow('Average', playerInfo.battingPosition.avg.toStringAsFixed(2)),
-                  _buildInfoRow('Median', playerInfo.battingPosition.median.toStringAsFixed(2)),
-                  _buildInfoRow('Innings', playerInfo.battingPosition.innings.toString()),
-                  const SizedBox(height: 32),
-                  _buildSectionHeader('Recent Form'),
-                  _buildInfoRow('Form Z', playerInfo.recentForm.formZ.toStringAsFixed(3)),
-                  _buildInfoRow('Confidence', playerInfo.recentForm.confidence.toStringAsFixed(3)),
-                  _buildInfoRow('As Of', playerInfo.recentForm.asOf),
+                  Expanded(child: leftColumn),
+                  const SizedBox(width: 80),
+                  Expanded(child: rightColumn),
                 ],
               ),
-            ),
-          ],
-        ),
       ),
     );
   }
