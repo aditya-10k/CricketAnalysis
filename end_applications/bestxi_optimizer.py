@@ -438,7 +438,7 @@ def _get_avg_batting_position(conn: db.Connection, player: str) -> float:
             WHERE match_id = ?
             AND innings = ?
             AND ball < ?
-            AND iswicket = 1
+            AND is_wicket = 1
         """
         
         try:
