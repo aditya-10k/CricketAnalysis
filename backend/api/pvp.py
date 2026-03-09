@@ -15,7 +15,7 @@ class PVPPredictRequest(BaseModel):
     batter: str
     bowler: str
     venue: Optional[str] = None
-    recent_matches_only: bool = False  # reserved for future use
+    recent_matches_only: bool = False
 
 
 def _confidence_from_sample(sample_size: str) -> str:
@@ -35,7 +35,7 @@ def predict_pvp(req: PVPPredictRequest):
     try:
         conn = get_connection()
 
-        # --- Head-to-head stats
+        # Head-to-head stats
         h2h = get_head_to_head(
             conn=conn,
             striker=req.batter,
@@ -43,7 +43,7 @@ def predict_pvp(req: PVPPredictRequest):
             venue=req.venue,
         )
 
-        # --- Insufficient data check
+        # Insufficient data check
         if h2h["balls_faced"] < 10:
             raise HTTPException(
                 status_code=400,
@@ -57,7 +57,7 @@ def predict_pvp(req: PVPPredictRequest):
                 }
             )
 
-        # --- Predict matchup
+        # Predict matchup
         prediction = predict_matchup(
             conn=conn,
             striker=req.batter,
@@ -68,7 +68,7 @@ def predict_pvp(req: PVPPredictRequest):
         pred = prediction["prediction"]
         sample_quality = _confidence_from_sample(pred["confidence"])
 
-        # --- Winner logic
+        # Winner logic
         winner = "batter" if pred["matchup_advantage"] > 0 else "bowler"
 
         return {

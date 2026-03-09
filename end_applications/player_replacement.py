@@ -1,6 +1,6 @@
 # end_applications/player_replacement_util.py
 """
-PLAYER REPLACEMENT ENGINE - Production API Functions
+PLAYER REPLACEMENT ENGINE
 Uses Euclidean distance in 4D z-score space with constraint matching.
 """
 

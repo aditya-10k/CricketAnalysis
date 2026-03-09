@@ -1,21 +1,12 @@
 # end_applications/bestxi_optimizer.py
 """
-BEST XI OPTIMIZER (v3.1 - PRODUCTION READY)
-
-FIXES:
-✅ Overseas constraint properly enforced
-✅ Batting position awareness (extracts from ball_by_ball)
-✅ Retired player filtering (last match < 730 days)
-✅ Matchup adjustments working
-✅ Realistic selection logic
+BEST XI OPTIMIZER (v3.1)
 """
 
 import db.session as db
 import numpy as np
 from typing import Optional, Dict, List, Tuple
 from datetime import datetime, timedelta
-
-# Import our modules
 import sys
 import os
 parent_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -52,8 +43,6 @@ def _is_batter(player: Dict) -> bool:
 
 def _is_bowler(player: Dict) -> bool:
     """
-    ✅ RELAXED: More realistic bowler detection.
-    
     A player is a bowler if:
     - Role is BOWL or AR
     - Has bowled 200+ balls (genuine bowling contribution)
@@ -87,28 +76,15 @@ def optimize_best_xi(
 ) -> Dict:
     """
     Optimize Best XI selection from home squad vs away squad.
-    
-    Args:
-        conn: Database connection
-        home_squad: List of player names (home team to select from)
-        away_squad: List of player names (away/opposition team)
-        venue: Optional venue name for venue-specific adjustments
-        constraints: Optional dict with:
-            - max_overseas: int (optional, if not provided no overseas limit)
-            - min_bowlers: int (default 4)
-            - min_batters: int (default 5)
-    
-    Returns:
-        Dict with selected team and analysis
     """
     
     if constraints is None:
         constraints = {}
     
-    # ✅ Make overseas optional - if not provided, no limit
+    #overseas optional - if not provided, no limit
     constraints.setdefault('min_bowlers', 4)
     constraints.setdefault('min_batters', 5)
-    # Don't set default for max_overseas - let it be None if not provided
+    # Don't set default for max_overseas
     
     if not home_squad or not away_squad:
         return {"error": "Both home_squad and away_squad must be provided"}
@@ -147,12 +123,6 @@ def optimize_best_xi(
 def _analyze_away_squad(conn: db.Connection, away_squad: List[str], venue: Optional[str] = None) -> Dict:
     """
     Analyze the away squad to understand their strengths.
-    
-    Returns dict with:
-        - squad_batting_strength: normalized avg batting value
-        - squad_bowling_strength: normalized avg bowling value
-        - dominant_bowling_style: pace/spin/balanced
-        - venue: optional venue info
     """
     
     squad_batting_values = []
@@ -166,22 +136,19 @@ def _analyze_away_squad(conn: db.Connection, away_squad: List[str], venue: Optio
             squad_batting_values.append(player_data['batting_value_z'])
             squad_bowling_values.append(player_data['bowling_value_z'])
             
-            # Infer bowling style from role (simplified)
+            # Infer bowling style from role
             if player_data['balls_bowled'] > 100:
                 role = player_data['role']
-                # Simplified: Assume spin if player name suggests it or if we have data
-                # For now, default to balanced distribution
-                bowling_styles.append('pace')  # Default to pace, can be enhanced later
+                bowling_styles.append('pace')
     
     # Calculate squad strengths
     avg_batting = np.mean(squad_batting_values) if squad_batting_values else 0.0
     avg_bowling = np.mean(squad_bowling_values) if squad_bowling_values else 0.0
     
-    # Determine dominant bowling style (simplified)
+    # Determine dominant bowling style
     if not bowling_styles:
         dominant_style = 'unknown'
     else:
-        # Simple heuristic: if more than 40% bowlers, it's pace-heavy
         dominant_style = 'balanced'
     
     return {
@@ -196,9 +163,6 @@ def _analyze_away_squad(conn: db.Connection, away_squad: List[str], venue: Optio
 def _get_player_data(conn: db.Connection, player: str) -> Optional[Dict]:
     """
     Get player's basic data from database.
-    
-    Returns dict with total_value_z, balls_bowled, balls_faced, etc.
-    Returns None if player not found.
     """
     
     query = """
@@ -255,7 +219,7 @@ def _get_player_data(conn: db.Connection, player: str) -> Optional[Dict]:
         'balls_bowled': balls_bowled,
         'batting_value_z': batting_value,
         'bowling_value_z': bowling_value,
-        'spin_bowling_rate': 0.5,  # Default - we'll infer from role
+        'spin_bowling_rate': 0.5,
         'total_value_z': total_value,
         'confidence': row[6],
         'days_since_last_match': row[7]
@@ -270,8 +234,6 @@ def _calculate_matchup_value(
 ) -> float:
     """
     Calculate matchup adjustment based on away squad analysis.
-    
-    Simplified version without PvP lookups - uses squad-level analysis.
     """
     
     matchup_adj = 0.0
@@ -293,7 +255,6 @@ def _calculate_matchup_value(
     if _is_bowler(candidate):
         batting_strength = away_analysis['squad_batting_strength']
         
-        # Strong bowlers get bonus vs strong batting
         if candidate['combined_value'] > 0.5 and batting_strength > 0.5:
             matchup_adj += 0.15
     
@@ -303,21 +264,15 @@ def _calculate_matchup_value(
 def _calculate_team_synergy(home_candidates: List[Dict], constraints: Dict) -> Optional[List[Dict]]:
     """
     Calculate team synergy and select best XI.
-    
-    Simplified version without full synergy calculations.
     """
     
-    # Use greedy selection with position awareness
     selected_team = _greedy_select_xi_with_positions(home_candidates, constraints)
     
     if not selected_team:
         return None
     
-    # Simple synergy: bonus for role balance
     for player in selected_team:
         synergy = 0.0
-        
-        # Bonus for all-rounders (they provide balance)
         if player['role'] == 'AR':
             synergy += 0.05
         
@@ -370,8 +325,6 @@ def _get_candidate_players(
     candidates = []
     for row in rows:
         player, role, nationality, base_value, confidence, form_value, balls_faced, balls_bowled, days_since = row
-        
-        # ✅ Extract batting position from ball_by_ball
         avg_position = _get_avg_batting_position(conn, player)
         
         combined_value = base_value + (form_value * 0.2)
@@ -399,13 +352,6 @@ def _get_candidate_players(
 def _get_avg_batting_position(conn: db.Connection, player: str) -> float:
     """
     Calculate average batting position based on wicket sequence.
-    
-    Position is determined by the order batters appear in each innings:
-    - First batter in innings = Position 1 or 2 (opener)
-    - Second wicket = Position 3
-    - Third wicket = Position 4, etc.
-    
-    Returns average position across all innings played.
     """
     
     query = """
@@ -422,16 +368,14 @@ def _get_avg_batting_position(conn: db.Connection, player: str) -> float:
     try:
         striker_entries = conn.execute(query, (player,)).fetchall()
     except db.OperationalError:
-        # Table doesn't exist or column name is different
         return 999.0
     
     if not striker_entries:
-        return 999.0  # Unknown
+        return 999.0
     
     positions = []
     
     for match_id, innings, first_ball in striker_entries:
-        # Get all wickets that fell BEFORE this player came in
         wicket_query = """
             SELECT COUNT(*) as wickets_before
             FROM ball_by_ball
@@ -444,7 +388,6 @@ def _get_avg_batting_position(conn: db.Connection, player: str) -> float:
         try:
             wickets_before = conn.execute(wicket_query, (match_id, innings, first_ball)).fetchone()[0]
         except (db.OperationalError, TypeError):
-            # Column might not exist, skip this entry
             continue
         
         # Position = wickets_before + 1
@@ -453,7 +396,6 @@ def _get_avg_batting_position(conn: db.Connection, player: str) -> float:
         # If 2 wickets before, they're position 4, etc.
         
         if wickets_before == 0:
-            # Opener - check if they're the first or second batter
             opener_query = """
                 SELECT COUNT(DISTINCT striker) as batters_before
                 FROM ball_by_ball
@@ -466,10 +408,9 @@ def _get_avg_batting_position(conn: db.Connection, player: str) -> float:
                 batters_before = conn.execute(opener_query, (match_id, innings, first_ball)).fetchone()[0]
                 position = 1 if batters_before == 0 else 2
             except (db.OperationalError, TypeError):
-                position = 1  # Default to opener
+                position = 1
         else:
-            # Position based on wickets
-            position = wickets_before + 2  # +2 because there are 2 openers
+            position = wickets_before + 2 
         
         positions.append(position)
     
@@ -485,7 +426,7 @@ def _apply_matchup_adjustments(
     away_analysis: Dict,
     venue: Optional[str]
 ) -> List[Dict]:
-    """Apply matchup advantages vs away squad (with error handling)."""
+    """Apply matchup advantages vs away squad."""
     
     away_batters = away_analysis['away_batters']
     away_bowlers = away_analysis['away_bowlers']
@@ -498,7 +439,7 @@ def _apply_matchup_adjustments(
         if _is_batter(candidate) and away_bowlers:
             batter_advantages = []
             
-            for away_bowler in away_bowlers[:8]:  # Top 8 likely bowlers
+            for away_bowler in away_bowlers[:8]:
                 try:
                     pvp = predict_matchup(conn, player, away_bowler, venue, use_style_context=False)
                     
@@ -509,7 +450,7 @@ def _apply_matchup_adjustments(
                         if confidence != 'INSUFFICIENT':
                             batter_advantages.append(advantage)
                 except Exception as e:
-                    pass  # Skip if data insufficient
+                    pass  
             
             if batter_advantages:
                 matchup_adj += np.mean(batter_advantages) * 0.6
@@ -558,13 +499,11 @@ def _greedy_select_xi_with_positions(candidates: List[Dict], constraints: Dict) 
         print(f"   DEBUG: Only {len(candidates)} candidates, need 11")
         return None
     
-    # Sort by batting position then value
     candidates_sorted = sorted(
         candidates, 
         key=lambda p: (p.get('avg_batting_position', 999), -p['combined_value'])
     )
     
-    # ✅ DEBUG: Show available roles
     available_batters = [p for p in candidates_sorted if _is_batter(p)]
     available_bowlers = [p for p in candidates_sorted if _is_bowler(p)]
     
@@ -582,7 +521,7 @@ def _greedy_select_xi_with_positions(candidates: List[Dict], constraints: Dict) 
     
     def can_add(player_dict):
         if max_overseas is None:
-            return True  # ✅ No overseas limit
+            return True  
         if player_dict['nationality'] != 'India':
             return overseas_count() < max_overseas
         return True
@@ -639,7 +578,7 @@ def _greedy_select_xi_with_positions(candidates: List[Dict], constraints: Dict) 
     
     selected = selected[:11]
     
-    # ✅ FINAL VALIDATION
+    #FINAL VALIDATION
     final_batters = count_batters()
     final_bowlers = count_bowlers()
     final_overseas = overseas_count()
@@ -658,7 +597,7 @@ def _greedy_select_xi_with_positions(candidates: List[Dict], constraints: Dict) 
         print(f"   DEBUG: Too many overseas: {final_overseas}/{max_overseas}")
         return None
     
-    print(f"   DEBUG: ✅ Selection successful!")
+    print(f"   DEBUG:Selection successful!")
     return selected
 
 
@@ -714,7 +653,7 @@ def _optimize_with_swaps(
 
 
 def _check_constraints(team: List[Dict], constraints: Dict) -> bool:
-    """✅ STRICT constraint checking."""
+    """STRICT constraint checking."""
     
     max_overseas = constraints.get('max_overseas', 4)
     min_bowlers = constraints.get('min_bowlers', 5)
@@ -779,33 +718,32 @@ def print_best_xi(result: Dict):
     """Pretty print result with batting position."""
     
     if 'error' in result:
-        print(f"\n❌ {result['error']}\n")
+        print(f"\n {result['error']}\n")
         return
     
     print("\n" + "="*100)
-    print(f"  🏏 OPTIMAL BEST XI (Squad vs Squad)")
+    print(f"  OPTIMAL BEST XI (Squad vs Squad)")
     print("="*100)
     
     if 'away_squad_analysis' in result:
         away = result['away_squad_analysis']
-        print(f"\n📊 Away Squad Analysis:")
+        print(f"\n Away Squad Analysis:")
         print(f"   Batting Strength: {away['squad_batting_strength']}")
         print(f"   Bowling Strength: {away['squad_bowling_strength']}")
         print(f"   Bowling Style: {away['dominant_bowling_style']}")
     
     if result.get('venue') != 'Neutral':
-        print(f"📍 Venue: {result['venue']}")
+        print(f" Venue: {result['venue']}")
     
-    print(f"\n💪 Team Total Value: {result['team_total_value']}")
-    print(f"⚡ Synergy Bonus: {result['team_synergy_bonus']}")
-    print(f"🎯 Matchup Advantage: {result['team_matchup_advantage']}")
-    print(f"🎲 Avg Confidence: {result['avg_confidence']}\n")
+    print(f"\n Team Total Value: {result['team_total_value']}")
+    print(f" Synergy Bonus: {result['team_synergy_bonus']}")
+    print(f" Matchup Advantage: {result['team_matchup_advantage']}")
+    print(f" Avg Confidence: {result['avg_confidence']}\n")
     
     print(f"{'#':<3} {'Player':<30} {'Role':<6} {'Pos':<5} {'Base':<7} {'Match':<7} {'Syn':<7} {'Final'}")
     print("─" * 100)
     
     for i, player in enumerate(result['team'], 1):
-        # ✅ Format position properly
         pos = player.get('avg_batting_position', 999)
         if pos < 999 and pos > 0:
             pos_str = f"{pos:.1f}"
@@ -817,7 +755,7 @@ def print_best_xi(result: Dict):
               f"{player['matchup_adjustment']:<7.3f} {player['synergy_bonus']:<7.3f} "
               f"{player['final_value']:.3f}")
     
-    print("\n📋 Constraints Met:")
+    print("\n Constraints Met:")
     c = result['constraints_met']
     print(f"   Overseas: {c['overseas_count']}/{c['max_overseas']}")
     print(f"   Bowlers: {c['bowlers']}")

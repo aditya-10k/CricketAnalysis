@@ -243,47 +243,6 @@ def team_elo_history(team: str):
     }
 
 
-# @router.get("/teams/{team}/players")
-# def team_players(team: str):
-#     conn = get_connection()
-
-#     try:
-#         players = conn.execute("""
-#             SELECT 
-#                 p.player,
-#                 pv.role,
-#                 pv.batting_style,
-#                 pv.bowling_style,
-#                 COUNT(DISTINCT p.match_id) AS matches_played
-#             FROM player_daily_innings p
-#             JOIN player_vectors pv ON p.player = pv.player
-#             WHERE p.team = ?
-#             GROUP BY p.player
-#             ORDER BY matches_played DESC
-#         """, (team,)).fetchall()
-#     except Exception as e:
-#         conn.close()
-#         raise HTTPException(status_code=500, detail=str(e))
-
-#     conn.close()
-
-#     if not players:
-#         raise HTTPException(status_code=404, detail="Team not found or no players")
-
-#     return {
-#         "team": team,
-#         "squad": [
-#             {
-#                 "player": r[0],
-#                 "role": r[1],
-#                 "batting_style": r[2],
-#                 "bowling_style": r[3],
-#                 "matches_played": r[4]
-#             }
-#             for r in players
-#         ]
-#     }
-
 
 @router.get("/teams/{team}/players")
 def team_players(

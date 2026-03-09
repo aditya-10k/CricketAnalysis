@@ -42,7 +42,7 @@ def find_replacements(req: PlayerReplacementRequest):
     try:
         conn = get_connection()
 
-        # --- Load target profile
+        # Load target profile
         target_profile = get_player_info(conn, req.player)
         if target_profile is None:
             raise HTTPException(
@@ -54,7 +54,7 @@ def find_replacements(req: PlayerReplacementRequest):
                 }
             )
 
-        # --- Run replacement engine (smart)
+        # Run replacement engine
         results = get_player_replacements_smart(
             conn=conn,
             target_player=req.player,
@@ -65,21 +65,18 @@ def find_replacements(req: PlayerReplacementRequest):
             ),
         )
 
-        # --- Apply API-level exclusions
         if req.exclude_players:
             results = [
                 r for r in results
                 if r["player"] not in req.exclude_players
             ]
 
-        # --- Apply role filter (optional)
         if req.role_filter:
             results = [
                 r for r in results
                 if r["role"] == req.role_filter
             ]
 
-        # --- Build response objects
         replacements = []
         for r in results:
             replacements.append({

@@ -2,12 +2,6 @@
 """
 SYNERGY - Partnership Analysis Engine
 Analyzes how players perform together vs separately.
-
-FIXES APPLIED:
-- Correct partnership calculation (innings-level, not ball-level)
-- Safe None handling throughout
-- Proper strike rate calculation
-- Complete bowling combination logic
 """
 
 import db.session as db
@@ -25,10 +19,7 @@ BOWLING_COMBO_STRONG = 60  # 10+ overs together
 BOWLING_COMBO_MODERATE = 30
 BOWLING_COMBO_WEAK = 12
 
-
-# =====================================================
 # BATTING PARTNERSHIPS
-# =====================================================
 
 def get_batting_partnership(
     conn: db.Connection,
@@ -38,14 +29,6 @@ def get_batting_partnership(
 ) -> Dict:
     """
     Get detailed batting partnership stats between two players.
-    
-    Args:
-        player_a: First batter name
-        player_b: Second batter name
-        venue: Optional venue filter
-        
-    Returns:
-        Complete partnership statistics
     """
     
     venue_filter = "AND venue = ?" if venue else ""
@@ -53,7 +36,7 @@ def get_batting_partnership(
     if venue:
         params.append(venue)
     
-    # ✅ FIXED: Count innings where both played, aggregate their individual contributions
+    #Count innings where both played, aggregate their individual contributions
     query = f"""
         WITH innings_together AS (
             SELECT match_id, innings, venue
@@ -97,7 +80,6 @@ def get_batting_partnership(
     
     row = conn.execute(query, query_params).fetchone()
     
-    # ✅ FIXED: Safe None handling
     if not row or row[2] is None or row[2] == 0:  # total_balls
         return {
             "player_a": player_a,
@@ -134,11 +116,11 @@ def get_batting_partnership(
     partnership_sr = (runs * 100.0 / balls) if balls > 0 else 0.0
     wpa_per_ball = (total_wpa / balls) if balls > 0 else 0.0
     
-    # Get solo performance for comparison
+    #solo performance for comparison
     player_a_solo = _get_solo_batting_stats(conn, player_a, venue)
     player_b_solo = _get_solo_batting_stats(conn, player_b, venue)
     
-    # Calculate synergy boost
+    #synergy boost
     if player_a_solo and player_b_solo and player_a_solo['strike_rate'] > 0 and player_b_solo['strike_rate'] > 0:
         expected_sr = (player_a_solo['strike_rate'] + player_b_solo['strike_rate']) / 2
         synergy_boost = (partnership_sr - expected_sr) / expected_sr if expected_sr > 0 else 0.0
@@ -172,7 +154,7 @@ def get_batting_partnership(
     else:
         rating = "POOR"
     
-    # Get hand combination
+    #hand combination
     hand_combo = _get_hand_combination(conn, player_a, player_b)
     
     return {
@@ -207,14 +189,6 @@ def get_best_batting_partners(
 ) -> List[Dict]:
     """
     Find best batting partners for a player.
-    
-    Args:
-        player: Player name
-        min_balls: Minimum balls together
-        top_k: Number of results to return
-        
-    Returns:
-        List of partners sorted by synergy score
     """
     
     # Find all partners (innings where both played)
@@ -285,13 +259,6 @@ def predict_batting_synergy(
     """
     Predict synergy for players who haven't played together.
     Uses similarity-based approach.
-    
-    Args:
-        player_a: First player name
-        player_b: Second player name
-        
-    Returns:
-        Predicted synergy with confidence
     """
     
     # Check if they've played together
@@ -310,8 +277,7 @@ def predict_batting_synergy(
     # Get player profiles
     profile_a = _get_batting_profile(conn, player_a)
     profile_b = _get_batting_profile(conn, player_b)
-    
-    # ✅ IMPROVED: Better error messages
+
     if not profile_a and not profile_b:
         return {
             "player_a": player_a,
@@ -331,7 +297,6 @@ def predict_batting_synergy(
             "error": f"Player '{player_b}' not found in player_vectors table. Insufficient career data."
         }
     
-    # Find similar partnerships
     similar_pairs = _find_similar_partnerships(conn, profile_a, profile_b)
     
     if not similar_pairs:
@@ -360,8 +325,7 @@ def predict_batting_synergy(
         confidence = "LOW"
     else:
         confidence = "VERY_LOW"
-    
-    # Generate reasoning
+
     reasoning = []
     if hand_bonus > 0:
         reasoning.append("Left-right combination (disrupts bowler rhythm)")
@@ -395,9 +359,7 @@ def predict_batting_synergy(
 
 
 
-# =====================================================
 # BOWLING COMBINATIONS
-# =====================================================
 
 def get_bowling_combination(
     conn: db.Connection,
@@ -408,18 +370,8 @@ def get_bowling_combination(
 ) -> Dict:
     """
     Get bowling combination stats (how effective when operating together).
-    
-    Args:
-        bowler_a: First bowler name
-        bowler_b: Second bowler name
-        phase: "powerplay" (overs 1-6), "middle" (7-15), "death" (16-20), or None
-        venue: Optional venue filter
-        
-    Returns:
-        Complete bowling combination statistics
     """
     
-    # ✅ FIXED: Separate phase filters for different parts of query
     phase_filter_match = ""
     phase_filter_combo = ""
     
@@ -523,11 +475,11 @@ def get_bowling_combination(
     wpa_per_ball = (total_wpa / balls) if balls > 0 else 0.0
     dot_pct = (dots / balls * 100) if balls > 0 else 0.0
     
-    # Get solo performance
+    # solo performance
     bowler_a_solo = _get_solo_bowling_stats(conn, bowler_a, phase, venue)
     bowler_b_solo = _get_solo_bowling_stats(conn, bowler_b, phase, venue)
     
-    # Calculate synergy boost
+    # synergy boost
     if bowler_a_solo and bowler_b_solo and bowler_a_solo['economy'] > 0 and bowler_b_solo['economy'] > 0:
         expected_economy = (bowler_a_solo['economy'] + bowler_b_solo['economy']) / 2
         economy_boost = (expected_economy - combined_economy) / expected_economy if expected_economy > 0 else 0.0
@@ -561,7 +513,7 @@ def get_bowling_combination(
     else:
         rating = "POOR"
     
-    # Wicket clustering (do wickets come in pairs?)
+    # Wicket clustering
     wicket_clustering = _calculate_wicket_clustering(conn, bowler_a, bowler_b, phase)
     
     # Get bowling styles
@@ -603,15 +555,6 @@ def get_best_bowling_partners(
 ) -> List[Dict]:
     """
     Find best bowling partners for a bowler.
-    
-    Args:
-        bowler: Bowler name
-        phase: Optional phase filter
-        min_balls: Minimum balls together
-        top_k: Number of results
-        
-    Returns:
-        List of partners sorted by synergy score
     """
     
     phase_filter = ""
@@ -669,9 +612,8 @@ def get_best_bowling_partners(
     return results[:top_k]
 
 
-# =====================================================
+
 # HELPER FUNCTIONS
-# =====================================================
 
 def _get_solo_batting_stats(conn: db.Connection, player: str, venue: Optional[str]) -> Optional[Dict]:
     """Get player's solo batting stats"""
@@ -709,8 +651,7 @@ def _get_solo_batting_stats(conn: db.Connection, player: str, venue: Optional[st
 
 def _get_solo_bowling_stats(conn: db.Connection, bowler: str, phase: Optional[str], venue: Optional[str]) -> Optional[Dict]:
     """Get bowler's solo stats"""
-    
-    # ✅ FIXED: Add table alias
+
     phase_filter = ""
     if phase == "powerplay":
         phase_filter = "AND b.over < 6"
@@ -795,7 +736,7 @@ def _get_batting_profile(conn: db.Connection, player: str) -> Optional[Dict]:
         
         style, role, rpa_z, wpa_z = row
         
-        # Get strike rate
+        # strike rate
         sr_row = conn.execute("""
             SELECT SUM(runs_off_bat) * 100.0 / COUNT(*) as sr
             FROM ball_by_ball
@@ -819,7 +760,7 @@ def _get_batting_profile(conn: db.Connection, player: str) -> Optional[Dict]:
 def _find_similar_partnerships(conn: db.Connection, profile_a: Dict, profile_b: Dict, limit: int = 30) -> List[Dict]:
     """Find similar partnerships for prediction"""
     
-    # Simplified: find any strong partnerships as proxies
+    #strong partnerships as proxies
     query = """
         WITH innings_together AS (
             SELECT match_id, innings
@@ -875,7 +816,6 @@ def _are_complementary_roles(profile_a: Dict, profile_b: Dict) -> bool:
 def _calculate_wicket_clustering(conn: db.Connection, bowler_a: str, bowler_b: str, phase: Optional[str]) -> float:
     """Calculate wicket clustering coefficient"""
     
-    # ✅ FIXED: Add table alias
     phase_filter = ""
     if phase == "powerplay":
         phase_filter = "AND b.over < 6"

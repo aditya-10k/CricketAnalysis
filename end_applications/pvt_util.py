@@ -2,21 +2,12 @@
 """
 PVT (Player vs Team) - Opposition Analysis Engine
 Analyzes player performance against specific teams and team strength tiers.
-
-FIXES APPLIED:
-1. WPA: SUM not AVG (preserves leverage signal)
-2. Safe dismissal prior (no explosion on 0 outs)
-3. Higher sample thresholds for PVT (150/120 balls)
-4. WPA-primary performance scoring (aligned with α=0.05)
-5. Safe tier fallback (no inversion)
-6. pvt_adjustment scalar for downstream use
 """
 
 import db.session as db
 import numpy as np
 from typing import Optional, Dict, List
 
-# ✅ FIX 3: Higher sample quality thresholds for PVT
 BATTING_SAMPLE_STRONG = 150
 BATTING_SAMPLE_MODERATE = 75
 BATTING_SAMPLE_WEAK = 30
@@ -43,14 +34,6 @@ def get_player_vs_team_batting(
 ) -> Dict:
     """
     Get player's batting performance against a specific team.
-    
-    Args:
-        player: Batter name
-        opponent_team: Opposition team name
-        venue: Optional venue filter
-        
-    Returns:
-        Complete batting stats vs this team
     """
     
     venue_filter = "AND venue = ?" if venue else ""
@@ -58,7 +41,6 @@ def get_player_vs_team_batting(
     if venue:
         params.append(venue)
     
-    # ✅ FIX 1: Use SUM(wpa) not AVG(wpa)
     query = f"""
         SELECT 
             COUNT(DISTINCT match_id) as matches,
@@ -106,7 +88,6 @@ def get_player_vs_team_batting(
     
     strike_rate = (runs * 100.0 / balls) if balls > 0 else 0.0
     
-    # ✅ FIX 2: Safe dismissal logic with prior
     dismissals_safe = max(dismissals, 1)
     average = runs / dismissals_safe
     not_out_heavy = (dismissals == 0 and balls >= 30)
@@ -114,7 +95,6 @@ def get_player_vs_team_batting(
     boundary_pct = (boundaries / balls * 100) if balls > 0 else 0.0
     wpa_per_ball = (total_wpa / balls) if balls > 0 else 0.0
     
-    # ✅ FIX 3: Updated sample quality thresholds
     if balls >= BATTING_SAMPLE_STRONG:
         sample = "STRONG"
     elif balls >= BATTING_SAMPLE_MODERATE:
@@ -127,7 +107,7 @@ def get_player_vs_team_batting(
     # Get player's career baseline for comparison
     baseline = _get_batting_baseline(conn, player)
     
-    # ✅ FIX 4: WPA-primary performance scoring (aligned with α=0.05)
+    #WPA-primary performance scoring (aligned with α=0.05)
     if baseline:
         sr_diff = strike_rate - baseline['career_sr']
         avg_diff = average - baseline['career_avg']
@@ -152,8 +132,7 @@ def get_player_vs_team_batting(
         performance_zscore = 0.0
         sr_diff = 0.0
         avg_diff = 0.0
-    
-    # ✅ FIX 6: Add pvt_adjustment scalar for downstream use
+
     sample_weight = min(1.0, balls / 200.0)
     pvt_adjustment = performance_zscore * sample_weight
     
@@ -197,22 +176,13 @@ def get_player_vs_team_bowling(
 ) -> Dict:
     """
     Get player's bowling performance against a specific team.
-    
-    Args:
-        player: Bowler name
-        opponent_team: Opposition team name
-        venue: Optional venue filter
-        
-    Returns:
-        Complete bowling stats vs this team
     """
     
     venue_filter = "AND venue = ?" if venue else ""
     params = [player, opponent_team]
     if venue:
         params.append(venue)
-    
-    # ✅ FIX 1: Use SUM(wpa) not AVG(wpa)
+
     query = f"""
         SELECT 
             COUNT(DISTINCT match_id) as matches,
@@ -258,8 +228,7 @@ def get_player_vs_team_bowling(
     bowl_average = (runs / wickets) if wickets > 0 else runs
     dot_pct = (dots / balls * 100) if balls > 0 else 0.0
     wpa_per_ball = (total_wpa / balls) if balls > 0 else 0.0
-    
-    # ✅ FIX 3: Updated sample quality thresholds
+
     if balls >= BOWLING_SAMPLE_STRONG:
         sample = "STRONG"
     elif balls >= BOWLING_SAMPLE_MODERATE:
@@ -272,7 +241,6 @@ def get_player_vs_team_bowling(
     # Get baseline for comparison
     baseline = _get_bowling_baseline(conn, player)
     
-    # ✅ FIX 4: WPA-primary performance scoring
     if baseline:
         econ_diff = baseline['career_economy'] - economy  # Lower is better for bowler
         wpa_diff = baseline['career_wpa_per_ball'] - wpa_per_ball  # More negative WPA is better
@@ -295,8 +263,7 @@ def get_player_vs_team_bowling(
         rating = "UNKNOWN"
         performance_zscore = 0.0
         econ_diff = 0.0
-    
-    # ✅ FIX 6: Add pvt_adjustment scalar
+
     sample_weight = min(1.0, balls / 200.0)
     pvt_adjustment = performance_zscore * sample_weight
     
@@ -336,14 +303,6 @@ def get_player_vs_all_teams(
 ) -> List[Dict]:
     """
     Get player's performance against all teams they've faced.
-    
-    Args:
-        player: Player name
-        role: "batting" or "bowling"
-        min_balls: Minimum balls for inclusion (default raised to 30)
-        
-    Returns:
-        List of team-wise stats sorted by performance
     """
     
     if role == "batting":
@@ -390,13 +349,6 @@ def get_player_vs_strength_tiers(
     """
     Analyze player performance by opponent strength tiers.
     Uses team ELO ratings if available, otherwise uses safe fallback.
-    
-    Args:
-        player: Player name
-        role: "batting" or "bowling"
-        
-    Returns:
-        Performance breakdown by strength tier
     """
     
     # Get all teams player faced
@@ -409,7 +361,7 @@ def get_player_vs_strength_tiers(
             "error": "Insufficient data"
         }
     
-    # Try to get ELO ratings (if team_elo table exists)
+    #ELO ratings (if team_elo table exists)
     team_elos = {}
     try:
         elo_rows = conn.execute("""
@@ -450,14 +402,12 @@ def get_player_vs_strength_tiers(
             else:
                 tier = "BOTTOM"
         else:
-            # ✅ FIX 5: Safe fallback based on exposure, NOT performance
-            # (prevents confounding player weakness with team strength)
             if balls >= 150:
-                tier = "STRONG"  # Faced often = important opponent
+                tier = "STRONG"  
             elif balls >= 75:
                 tier = "AVERAGE"
             else:
-                tier = "WEAK"  # Faced rarely = less important
+                tier = "WEAK" 
         
         tiers[tier].append(team_stats)
     
@@ -502,7 +452,6 @@ def get_player_vs_strength_tiers(
                 "avg_pvt_adjustment": round(np.mean([t['pvt_adjustment'] for t in teams]), 3)
             }
     
-    # Generate interpretation
     interpretation = _interpret_tier_performance(tier_summary, role)
     
     return {
@@ -576,8 +525,7 @@ def _interpret_tier_performance(tier_summary: Dict, role: str) -> str:
     
     if not tier_summary:
         return "Insufficient data for tier analysis"
-    
-    # Check if performance improves or degrades vs stronger teams
+
     tier_order = ['elite', 'strong', 'average', 'weak', 'bottom']
     available_tiers = [t for t in tier_order if t in tier_summary]
     
@@ -585,8 +533,7 @@ def _interpret_tier_performance(tier_summary: Dict, role: str) -> str:
         return "Limited sample across strength tiers"
     
     pvt_scores = [tier_summary[t]['avg_pvt_adjustment'] for t in available_tiers]
-    
-    # Check trend (using first 3 tiers only to avoid noise)
+
     check_tiers = available_tiers[:min(3, len(available_tiers))]
     check_scores = [tier_summary[t]['avg_pvt_adjustment'] for t in check_tiers]
     

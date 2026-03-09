@@ -56,7 +56,6 @@ def optimize_best_xi_api(req: BestXIRequest):
             constraints=constraints_dict
         )
 
-        # ❌ Optimizer-level failure
         if "error" in result:
             raise HTTPException(
                 status_code=400,

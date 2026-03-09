@@ -1,6 +1,6 @@
 # end_applications/player_replacement_util.py
 """
-PLAYER REPLACEMENT ENGINE - Production API Functions
+PLAYER REPLACEMENT ENGINE
 Uses Euclidean distance in 4D z-score space with constraint matching.
 """
 
@@ -224,9 +224,6 @@ def list_available_nationalities(conn: db.Connection) -> list[str]:
     
     return [row[0] for row in rows]
 
-
-# Add to end_applications/player_replacement_util.py
-
 def get_player_replacements_smart(
     conn: db.Connection,
     target_player: str,
@@ -245,31 +242,28 @@ def get_player_replacements_smart(
     - Average players: max_value_drop = 0.2, min_confidence = 0.6
     """
     
-    # Get target player info
     target = _load_target_player(conn, target_player)
     if target is None:
         raise ValueError(f"Target player '{target_player}' not found")
     
     target_value = target["total_value_z"]
     
-    # Adaptive thresholds based on player quality
     if target_value > 1.0:
-        # Elite player - very rare, need relaxed filters
+        #Elite player
         max_value_drop = 0.8
         min_confidence = 0.5
         tier = "ELITE"
     elif target_value > 0.5:
-        # Good player - somewhat rare
+        # Good player
         max_value_drop = 0.5
         min_confidence = 0.6
         tier = "GOOD"
     else:
-        # Average player - standard filters
+        # Average player
         max_value_drop = 0.3
         min_confidence = 0.6
         tier = "AVERAGE"
     
-    # Try with adaptive filters
     results = get_player_replacements(
         conn=conn,
         target_player=target_player,
@@ -282,14 +276,13 @@ def get_player_replacements_smart(
         max_value_drop=max_value_drop
     )
     
-    # If still no results and filters are strict, relax further
     if len(results) == 0 and exclude_inactive:
         results = get_player_replacements(
             conn=conn,
             target_player=target_player,
             top_k=top_k,
             allowed_nationalities=allowed_nationalities,
-            exclude_inactive=False,  # Include inactive players
+            exclude_inactive=False,
             match_batting_style=match_batting_style,
             match_bowling_style=match_bowling_style,
             min_confidence=min_confidence,

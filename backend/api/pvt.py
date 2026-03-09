@@ -1,18 +1,3 @@
-'''
-Docstring for backend.api.pvt
-
-| Feature             | Status         |
-| ------------------- | -------------- |
-| Core PVT stats      | Implemented    |
-| WPA-primary scoring | Implemented    |
-| Sample quality      | Implemented    |
-| Phase split         | Needs new SQL  |
-| Style split         | Needs new SQL  |
-| Key dismissals      | Needs new SQL  |
-| Venue home/away     | Needs metadata |
-
-'''
-
 from typing import Optional
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
@@ -49,7 +34,7 @@ class PVTBatterRequest(BaseModel):
     batter: str
     team: str
     venue: Optional[str] = None
-    phase: Optional[str] = "all"  # accepted but not used yet
+    phase: Optional[str] = "all"
 
 @router.post("/batter")
 def batter_vs_team(req: PVTBatterRequest):
@@ -102,7 +87,7 @@ class PVTBowlerRequest(BaseModel):
     bowler: str
     team: str
     venue: Optional[str] = None
-    phase: Optional[str] = "all"  # accepted but not used yet
+    phase: Optional[str] = "all"
 
 @router.post("/bowler")
 def bowler_vs_team(req: PVTBowlerRequest):

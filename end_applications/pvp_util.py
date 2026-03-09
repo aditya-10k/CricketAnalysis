@@ -2,12 +2,6 @@
 """
 PVP (Player vs Player) - Head-to-Head Matchup Engine
 Analyzes striker vs bowler historical performance with venue/style context.
-
-FIXES:
-- Strike rate: SUM/COUNT aggregate (not AVG of per-ball)
-- Column names: Use 'rpa'/'wpa' (not delta_*)
-- Dismissal math: Clamped with T20 prior (15 balls/dismissal)
-- SR normalization: Documented as T20 heuristic
 """
 
 import db.session as db
@@ -15,10 +9,9 @@ import numpy as np
 from typing import Optional, Dict, List
 
 # T20 priors for Bayesian smoothing
-# ✅ UPDATED: T20 priors for Bayesian smoothing
-T20_PRIOR_BALLS_PER_DISMISSAL = 22.0  # Updated: 1 wicket per 22 balls = 4.5%
-T20_PRIOR_STRIKE_RATE = 135.0         # Updated: T20 global average
-T20_PRIOR_WICKET_RATE = 0.045         # Updated: 4.5%
+T20_PRIOR_BALLS_PER_DISMISSAL = 22.0  # 1 wicket per 22 balls = 4.5%
+T20_PRIOR_STRIKE_RATE = 135.0         # T20 global average
+T20_PRIOR_WICKET_RATE = 0.045         
 
 
 
@@ -30,14 +23,6 @@ def get_head_to_head(
 ) -> Dict:
     """
     Get complete head-to-head stats between striker and bowler.
-    
-    Args:
-        striker: Batter name
-        bowler: Bowler name
-        venue: Optional venue filter (e.g., "Wankhede Stadium")
-    
-    Returns:
-        Dictionary with historical stats and sample quality
     """
     
     # Build query with optional venue filter
@@ -46,7 +31,6 @@ def get_head_to_head(
     if venue:
         params.append(venue)
     
-    # ✅ FIXED: Use SUM/COUNT for SR, not AVG of per-ball
     query = f"""
         SELECT 
             COUNT(*) as balls,
@@ -89,7 +73,6 @@ def get_head_to_head(
     boundaries = row[5] or 0
     matches = row[6] or 0
     
-    # ✅ FIXED: Correct SR calculation
     strike_rate = (runs * 100.0 / balls) if balls > 0 else 0.0
     dismissal_prob = (dismissals / balls) if balls > 0 else 0.0
     
@@ -130,18 +113,11 @@ def predict_matchup(
 ) -> Dict:
     """
     Predict matchup outcome using Bayesian inference.
-    
     Combines:
     - Historical head-to-head
     - Player baseline stats
     - Venue-specific performance (if available)
     - Style matchup context (if enabled)
-    
-    Args:
-        striker: Batter name
-        bowler: Bowler name
-        venue: Specific venue for prediction
-        use_style_context: Include batting/bowling style analysis
     """
     
     # Get head-to-head stats (venue-specific if provided)
@@ -173,7 +149,7 @@ def predict_matchup(
     elif h2h_balls >= 6:
         h2h_weight = 0.3  # Weak evidence
     else:
-        h2h_weight = 0.0  # No evidence, use baseline only
+        h2h_weight = 0.0  # No evidence
     
     baseline_weight = 1 - h2h_weight
     
@@ -183,8 +159,7 @@ def predict_matchup(
                    striker_baseline['avg_strike_rate'] * baseline_weight)
     else:
         pred_sr = striker_baseline['avg_strike_rate']
-    
-    # ✅ FIXED: Clamped dismissal probability with T20 prior
+
     baseline_dismissal = (1.0 / max(striker_baseline['avg_balls_per_dismissal'], 
                                     T20_PRIOR_BALLS_PER_DISMISSAL)) * 100
     
@@ -200,25 +175,21 @@ def predict_matchup(
                    striker_baseline['avg_wpa_per_ball'] * baseline_weight)
     else:
         pred_wpa = striker_baseline['avg_wpa_per_ball']
-    
-    # ✅ FIXED: T20-calibrated advantage score
-    # SR Z-Score: T20 avg = 135, StdDev = 20
+
     sr_zscore = (pred_sr - 135.0) / 20.0
     
-    # Dismissal Z-Score: T20 avg = 4.5% (1 wicket per 22 balls), StdDev = 1.5
     # LOWER dismissal is BETTER for striker, so formula is (average - predicted)
     dismissal_zscore = (4.5 - pred_dismissal) / 1.5
     
     # Weighted score: SR matters more in T20 (60% weight vs 40% for safety)
     advantage_score = (sr_zscore * 0.6) + (dismissal_zscore * 0.4)
     
-    # Style adjustment (if available)
+    # Style adjustment
     style_adjustment = 0.0
     if style_context and style_context.get('advantage_score'):
         style_adjustment = style_context['advantage_score'] * 0.15  # 15% max impact
         advantage_score += style_adjustment
     
-    # Clip to [-1, 1]
     advantage_score = max(-1, min(1, advantage_score))
     
     return {
@@ -254,14 +225,8 @@ def get_bowler_vs_batters(
 ) -> List[Dict]:
     """
     Find which batters this bowler dominates (or struggles against).
-    
-    Args:
-        bowler: Bowler name
-        min_balls: Minimum balls for inclusion
-        top_k: Number of results to return
     """
     
-    # ✅ FIXED: Correct SR calculation in aggregate
     query = """
         SELECT 
             striker,
@@ -308,11 +273,8 @@ def get_venue_specific_h2h(
 ) -> List[Dict]:
     """
     Get head-to-head stats broken down by venue.
-    
-    Returns list of venues with matchup data.
     """
-    
-    # ✅ FIXED: Correct SR in GROUP BY query
+
     query = """
         SELECT 
             venue,
@@ -357,7 +319,6 @@ def _get_player_baseline(
     params = [player] if not venue else [player, venue]
     
     if is_batting:
-        # ✅ FIXED: Correct SR and dismissal calculations
         query = f"""
             SELECT 
                 SUM(runs_off_bat) * 100.0 / COUNT(*) as avg_sr,
@@ -376,7 +337,6 @@ def _get_player_baseline(
             total_balls = row[2]
             total_dismissals = row[3] or 0
             
-            # ✅ FIXED: Clamped with prior to avoid explosions
             if total_dismissals > 0:
                 balls_per_dismissal = total_balls / total_dismissals
                 balls_per_dismissal = max(balls_per_dismissal, T20_PRIOR_BALLS_PER_DISMISSAL)
@@ -390,7 +350,6 @@ def _get_player_baseline(
                 "total_balls": int(total_balls)
             }
     else:
-        # ✅ FIXED: Correct economy calculation
         query = f"""
             SELECT 
                 SUM(runs_off_bat) * 1.0 / COUNT(*) as avg_runs_per_ball,
@@ -406,13 +365,12 @@ def _get_player_baseline(
         row = conn.execute(query, params).fetchone()
         
         if row:
-            # ✅ FIXED: Smooth wicket rate with prior
             raw_wicket_rate = row[2] or 0
-            wicket_rate = max(raw_wicket_rate, T20_PRIOR_WICKET_RATE * 0.5)  # At least half of prior
+            wicket_rate = max(raw_wicket_rate, T20_PRIOR_WICKET_RATE * 0.5) 
             
             return {
                 "avg_runs_per_ball": round(row[0] or 0, 3),
-                "avg_economy": round((row[0] or 0) * 6, 2),  # Runs per over
+                "avg_economy": round((row[0] or 0) * 6, 2),
                 "avg_wpa_per_ball": round(row[1] or 0, 4),
                 "wicket_rate": round(wicket_rate, 4),
                 "total_balls": int(row[3])
@@ -428,11 +386,6 @@ def _get_style_matchup(
 ) -> Optional[Dict]:
     """
     Analyze batting style vs bowling style matchup.
-    
-    Returns advantage score based on historical patterns:
-    - Right-hand bat vs left-arm spinner (typically harder)
-    - Left-hand bat vs leg-spinner (natural advantage)
-    - etc.
     """
     
     # Get styles
@@ -453,7 +406,7 @@ def _get_style_matchup(
     if not bat_style or not bowl_style:
         return None
     
-    # Style-based heuristics (can be improved with historical data mining)
+    # Style-based heuristics
     advantage_score = 0.0
     notes = []
     

@@ -16,23 +16,23 @@ check = conn.execute("""
 """).fetchone()
 
 if not check:
-    print("❌ ball_by_ball table does NOT exist")
+    print(" ball_by_ball table does NOT exist")
     print("\nTo create it:")
     print("1. Uncomment load_ball_by_ball_combined() in db/build_analytics_db.py")
     print("2. Run: python db/build_analytics_db.py\n")
     conn.close()
     exit(1)
 
-print("✅ ball_by_ball table EXISTS\n")
+print(" ball_by_ball table EXISTS\n")
 
 # Get columns
 columns = conn.execute("PRAGMA table_info(ball_by_ball)").fetchall()
 
-print("📋 Columns:")
+print(" Columns:")
 for col in columns:
     print(f"   - {col[1]} ({col[2]})")
 
-print("\n🔍 Checking critical columns...")
+print("\n Checking critical columns...")
 
 critical_cols = {
     'striker': False,
@@ -58,19 +58,19 @@ for col in columns:
 
 print()
 for col, exists in critical_cols.items():
-    status = "✅" if exists else "❌"
+    status = "Correct" if exists else "Wrong"
     print(f"{status} {col}")
 
-print(f"\n📊 RPA column: {rpa_col if rpa_col else '❌ NOT FOUND'}")
-print(f"📊 WPA column: {wpa_col if wpa_col else '❌ NOT FOUND'}")
+print(f"\n RPA column: {rpa_col if rpa_col else ' NOT FOUND'}")
+print(f" WPA column: {wpa_col if wpa_col else ' NOT FOUND'}")
 
 if not rpa_col or not wpa_col:
-    print("\n⚠️  WARNING: RPA/WPA columns not found!")
+    print("\n  WARNING: RPA/WPA columns not found!")
     print("   PVP queries assume columns named 'rpa' and 'wpa'")
     print("   If yours are named differently, update pvp_util.py queries\n")
 
 # Sample data
-print("\n📦 Sample data (first 3 rows):\n")
+print("\n Sample data (first 3 rows):\n")
 sample = conn.execute("SELECT * FROM ball_by_ball LIMIT 3").fetchall()
 
 if sample:
@@ -81,6 +81,6 @@ if sample:
             print(f"   {name}: {val}")
         print()
 else:
-    print("❌ Table is EMPTY\n")
+    print(" Table is EMPTY\n")
 
 conn.close()
