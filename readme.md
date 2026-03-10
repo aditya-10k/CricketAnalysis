@@ -101,9 +101,6 @@ Provides APIs for:
 - Best XI optimization
 - Player replacement
 
----
 
-## Demo Video
 
-Watch the project demonstration here:
 
